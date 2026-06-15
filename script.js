@@ -137,7 +137,7 @@ auth.onAuthStateChanged(user => {
                     ouvirCardsDoCliente(user.uid);
                     ouvirEConstruirMenuCliente(); 
                     inicializarBotaoWhatsApp();
-                    configurarCopiaPixPainel(); // Ativa a função de cópia inteligente da chave PIX
+                    configurarCopiaPixPainel(); 
                 }
             });
         }
@@ -164,18 +164,48 @@ function verificarSeTemCardNaoAdquirido(jogosLiberadosUsuario) {
 
 function deslogar() { auth.signOut().then(() => location.reload()); }
 
-// ADIÇÃO CIRÚRGICA: FUNÇÃO DE CÓPIA DA CHAVE PIX NO PAINEL DO CLIENTE
+// FUNÇÃO GLOBAL DE COPIA BLINDADA COM FALLBACK AUTOMÁTICO (CORREÇÃO DE SEGURANÇA LOCAL/HTTPS)
+function executarCopiaGamerBlindada(textoParaCopiar, elementoBotao) {
+    const textoOriginal = elementoBotao.innerText;
+
+    if (navigator.clipboard && window.isSecureContext) {
+        // Método 1: API moderna (Exige HTTPS)
+        navigator.clipboard.writeText(textoParaCopiar).then(() => {
+            elementoBotao.innerText = "✅ Copiado";
+            setTimeout(() => { elementoBotao.innerText = textoOriginal; }, 2000);
+        }).catch(err => {
+            executarMetodoCopiaAntigo(textoParaCopiar, elementoBotao, textoOriginal);
+        });
+    } else {
+        // Método 2: Fallback Clássico (Funciona em file:/// e HTTP comum)
+        executarMetodoCopiaAntigo(textoParaCopiar, elementoBotao, textoOriginal);
+    }
+}
+
+function executarMetodoCopiaAntigo(texto, botao, textoOrig) {
+    const textarea = document.createElement("textarea");
+    textarea.value = texto;
+    textarea.style.position = "fixed"; 
+    textarea.style.opacity = "0";
+    document.body.appendChild(textarea);
+    textarea.select();
+    try {
+        document.execCommand("copy");
+        botao.innerText = "✅ Copiado";
+    } catch (err) {
+        console.error("Falha ao copiar", err);
+    }
+    document.body.removeChild(textarea);
+    setTimeout(() => { botao.innerText = textoOrig; }, 2000);
+}
+
 function configurarCopiaPixPainel() {
     const btnCopiarPix = document.getElementById('btn-copiar-pix-painel');
     if (btnCopiarPix) {
-        btnCopiarPix.addEventListener('click', () => {
+        btnCopiarPix.onclick = () => {
             const chaveTexto = document.getElementById('valor-chave-pix').innerText;
-            navigator.clipboard.writeText(chaveTexto).then(() => {
-                const textoOriginal = btnCopiarPix.innerText;
-                btnCopiarPix.innerText = "✅ Copiado";
-                setTimeout(() => { btnCopiarPix.innerText = textoOriginal; }, 2000);
-            });
-        });
+            executarCopiaGamerBlindada(chaveTexto, btnCopiarPix);
+        };
     }
 }
 
@@ -308,7 +338,6 @@ function ouvirCardsDoCliente(uid) {
     });
 }
 
-// ADIÇÃO CIRÚRGICA: INTEGRAÇÃO DA EXIBIÇÃO DE SENHAS DINÂMICAS DENTRO DO MODAL DO CARD
 function abrirModalJogo(card) {
     const imgCapa = document.getElementById('modal-jogo-capa');
     imgCapa.src = card.capa_url;
@@ -317,14 +346,12 @@ function abrirModalJogo(card) {
     
     imgCapa.addEventListener('dragstart', (e) => e.preventDefault());
 
-    // Configuração do Sistema Secreto de Senhas do Card
     const containerSenha = document.getElementById('container-senha-protegida-modal');
     const btnRevelarSenha = document.getElementById('btn-revelar-senha-modal');
-    const areaTextoSenha = document.getElementById('area-block-texto-senha') || document.getElementById('area-texto-senha-secreta');
+    const areaTextoSenha = document.getElementById('area-texto-senha-secreta');
     const textoSenhaReal = document.getElementById('texto-senha-secreta-real');
     const btnCopiarSenha = document.getElementById('btn-copiar-senha-modal');
 
-    // Reseta o estado visual do painel de senhas interno para segurança
     btnRevelarSenha.style.display = "block";
     areaTextoSenha.style.display = "none";
 
@@ -332,19 +359,13 @@ function abrirModalJogo(card) {
         textoSenhaReal.innerText = card.senha_patch.trim();
         containerSenha.style.display = "block";
         
-        // Ação de clique para revelar a senha com efeito
         btnRevelarSenha.onclick = () => {
             btnRevelarSenha.style.display = "none";
             areaTextoSenha.style.display = "block";
         };
 
-        // Ação de clique para copiar a chave de extração
         btnCopiarSenha.onclick = () => {
-            navigator.clipboard.writeText(textoSenhaReal.innerText).then(() => {
-                const textoOriginal = btnCopiarSenha.innerText;
-                btnCopiarSenha.innerText = "✅ Senha Copiada!";
-                setTimeout(() => { btnCopiarSenha.innerText = textoOriginal; }, 2000);
-            });
+            executarCopiaGamerBlindada(textoSenhaReal.innerText, btnCopiarSenha);
         };
     } else {
         containerSenha.style.display = "none";
@@ -439,6 +460,11 @@ function ouvirEConstruirMenuCliente() {
             menuContainer.style.display = "none";
         }
     });
+}
+
+function inicializarBotaoWhatsApp() {
+    const whatsappNumero = "5500000000000"; 
+    document.getElementById('btn-whatsapp-flutuante').href = `https://api.whatsapp.com/send?phone=${whatsappNumero}&text=Ol%C3%A1,%20preciso%20de%20ajuda%20no%20Hub!`;
 }
 
 // ==========================================================================
@@ -568,7 +594,7 @@ document.getElementById('btn-salvar-visual-menu').addEventListener('click', asyn
         } else {
             const linesSub = bloco.querySelectorAll('.linha-subcategoria-visual');
             linesSub.forEach(linha => {
-                const txt = linha.querySelector('.sub-txt').value.trim();
+                const txt = inlineSub = linha.querySelector('.sub-txt').value.trim();
                 const url = linha.querySelector('.sub-url').value.trim();
 
                 if (txt && url) {
@@ -602,7 +628,7 @@ document.getElementById('btn-salvar-visual-menu').addEventListener('click', asyn
 });
 
 // ==========================================================================
-// CONTROLE DE CARDS DE JOGOS (ADMIN - COM 5º CAMPO DE SENHA INJETADO)
+// CONTROLE DE CARDS DE JOGOS (ADMIN)
 // ==========================================================================
 document.getElementById('form-criar-card').addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -619,7 +645,7 @@ document.getElementById('form-criar-card').addEventListener('submit', async (e) 
         titulo: document.getElementById('card-titulo').value.trim(),
         capa_url: document.getElementById('card-capa').value.trim(),
         descricao: document.getElementById('card-descricao').value.trim(),
-        senha_patch: document.getElementById('card-senha-patch').value.trim(), // Salvamento do 5º Campo de Senhas
+        senha_patch: document.getElementById('card-senha-patch').value.trim(), 
         botoes: botoes
     };
 
@@ -674,7 +700,7 @@ function carregarCardParaEdicao(id) {
         document.getElementById('card-titulo').value = card.titulo;
         document.getElementById('card-capa').value = card.capa_url;
         document.getElementById('card-descricao').value = card.descricao;
-        document.getElementById('card-senha-patch').value = card.senha_patch || ""; // Resgata a senha na edição
+        document.getElementById('card-senha-patch').value = card.senha_patch || ""; 
         
         for(let i=1; i<=4; i++) {
             document.getElementById(`btn-txt-${i}`).value = "";
