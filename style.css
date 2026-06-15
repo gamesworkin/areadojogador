@@ -790,3 +790,49 @@ input:focus, textarea:focus, select:focus {
     from { transform: scale(0.95); opacity: 0; }
     to { transform: scale(1); opacity: 1; }
 }
+/* ==========================================================================
+   ADICIONADO: REGRAS DE VITRINE DINÂMICA E ALINHAMENTO RESPONSIVO DE CARDS
+   ========================================================================== */
+
+/* Garante o alinhamento correto dos elementos internos de cards de venda */
+.grid-cards .game-card {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    height: 100%;
+}
+
+/* Ajuste do Grid para Mosaico de 3 Cards por linha no Celular */
+@media (max-width: 600px) {
+    .grid-cards {
+        grid-template-columns: repeat(3, 1fr) !important;
+        gap: 8px !important;
+        padding: 5px !important;
+    }
+
+    .grid-cards .game-card h4 {
+        font-size: 0.7rem !important;
+        padding: 6px 4px !important;
+        white-space: normal !important;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        line-height: 1.2;
+    }
+
+    .grid-cards .game-card img {
+        height: 130px !important;
+        object-fit: cover;
+    }
+
+    /* Ajuste do badge de preço flutuante nos cards da loja no celular */
+    .grid-cards .game-card div[style*="position:absolute"] {
+        font-size: 0.55rem !important;
+        padding: 2px 4px !important;
+        top: 5px !important;
+        right: 5px !important;
+    }
+}
