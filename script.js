@@ -1,5 +1,5 @@
 // ==========================================================================
-// CONFIGURAÇÃO DO FIREBASE (COMPLETA E INTACTA)
+// CONFIGURAÇÃO DO FIREBASE (COMPLETA E RESTAURADA)
 // ==========================================================================
 const firebaseConfig = {
     apiKey: "AIzaSyBu7DKMzV-LwEKcnDYK7Y-1q9pNSCHE7jE",
@@ -37,7 +37,6 @@ document.addEventListener("DOMContentLoaded", () => {
     configurarUploadComprovante();
     configurarAbasPainelAdmin();
     configurarFormularioCadastroCards();
-    configurarExpansorVitrine();
 
     // Eventos do Modal de Detalhes
     const btnRevelarSenha = document.getElementById("btn-revelar-senha-modal");
@@ -78,8 +77,8 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 
-    // Escuta ativa de Cards Cadastrados no Banco de Dados
-    db.ref("cards_jogos").on("value", snapshot => {
+    // RETORNOU: Escuta ativa de Cards Cadastrados no caminho correto "cards_disponiveis"
+    db.ref("cards_disponiveis").on("value", snapshot => {
         todosOsCards = snapshot.val() || {};
         processarEPresentarDados();
         if (usuarioLogadoUid && informacoesUsuarioLogado.regra === "admin") {
@@ -106,25 +105,6 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 });
-
-// FUNÇÃO PARA ATIVAR O COLAPSAR E EXPANDIR DOS PATCHS DISPONÍVEIS
-function configurarExpansorVitrine() {
-    const btnToggle = document.getElementById("btn-toggle-vitrine");
-    const conteudo = document.getElementById("conteudo-vitrine-expansivel");
-    const icone = document.getElementById("icone-retrai-expandi");
-
-    if (btnToggle && conteudo) {
-        btnToggle.addEventListener("click", () => {
-            if (conteudo.classList.contains("aberto")) {
-                conteudo.classList.remove("aberto");
-                icone.innerText = "▼";
-            } else {
-                conteudo.classList.add("aberto");
-                icone.innerText = "▲";
-            }
-        });
-    }
-}
 
 // Alternar entre Telas/Views principais do app
 function alternarTelasVisiveis(idDaViewAlvo) {
@@ -262,75 +242,46 @@ function processarEPresentarDados() {
     atualizarPainelCliente(jogosAdquiridosIds, jogosEmAnaliseIds);
 }
 
-// RENDERIZAÇÃO DO PAINEL DO JOGADOR SEM OCULTAR PATCHS DISPONÍVEIS
+// RENDERIZAÇÃO ESTÁVEL DA INTERFACE DO CLIENTE
 function atualizarPainelCliente(jogosAdquiridosIds, jogosEmAnaliseIds) {
     const gridLiberados = document.getElementById("grid-cards-cliente");
     const gridVitrine = document.getElementById("grid-vitrine-vendas");
     const areaCompraPendente = document.getElementById("area-compra-pendente");
-    const containerStatusAnalise = document.getElementById("container-status-analise-pagamento");
 
     if (!gridLiberados || !gridVitrine) return;
 
     gridLiberados.innerHTML = "";
     gridVitrine.innerHTML = "";
-    containerStatusAnalise.innerHTML = "";
 
     let contemPatchesParaComprar = false;
-    let contemMensagemDeAnalise = false;
 
-    // 1. RENDERIZA OS AVISOS DE ANÁLISE DE FORMA PERSISTENTE
-    Object.keys(solicitacoesGeraisDoBanco).forEach(key => {
-        const sol = solicitacoesGeraisDoBanco[key];
-        if (sol.usuarioUid === usuarioLogadoUid && sol.statusSolicitacao === "pendente") {
-            contemMensagemDeAnalise = true;
-            const cardInfo = todosOsCards[sol.cardId] || { titulo: "Patch Solicitado" };
-            
-            const avisoBox = document.createElement("div");
-            avisoBox.className = "box-alerta";
-            avisoBox.style.borderColor = "#ffcc00";
-            avisoBox.innerHTML = `
-                <h3 style="color: #ffcc00; margin-bottom:8px;">⏳ Pagamento em Análise</h3>
-                <p style="font-size:0.9rem; color:#8899a6;">
-                    Seu comprovante para o patch <strong>${cardInfo.titulo}</strong> está sob verificação da nossa equipe de moderação. A liberação ocorrerá em instantes!
-                </p>
-            `;
-            containerStatusAnalise.appendChild(avisoBox);
-        }
-    });
-
-    containerStatusAnalise.style.display = contemMensagemDeAnalise ? "block" : "none";
-
-    // 2. FILTRA E EXIBE OS CARDS NOS GRIDS CORRETOS (RESTAURA PATCHS NÃO COMPRADOS)
     Object.keys(todosOsCards).forEach(id => {
         const card = todosOsCards[id];
 
         if (jogosAdquiridosIds.includes(id)) {
-            // Jogo Liberado/Aprovado
             const divGamer = document.createElement("div");
             divGamer.className = "game-card";
             divGamer.onclick = () => abrirModalDetalhesJogo(id, true);
             divGamer.innerHTML = `
-                <img src="${card.capa}" alt="${card.titulo}">
+                <img src="${card.capa_url || card.capa}" alt="${card.titulo}">
                 <h4>${card.titulo}</h4>
             `;
             gridLiberados.appendChild(divGamer);
         } else {
-            // Jogo Ainda Não Adquirido pelo Cliente (Permanece visível na vitrine colapsável!)
             contemPatchesParaComprar = true;
             
             const divVitrine = document.createElement("div");
             divVitrine.className = "game-card";
             divVitrine.onclick = () => abrirModalDetalhesJogo(id, false);
             divVitrine.innerHTML = `
-                <div style="position:absolute; top:10px; right:10px; background:#ffcc00; color:#000; font-weight:bold; padding:4px 8px; font-size:0.75rem; border-radius:4px; z-index:2;">${card.preco || "R$ 10,00"}</div>
-                <img src="${card.capa}" alt="${card.titulo}">
+                <div style="position:absolute; top:10px; right:10px; background:#00ff66; color:#000; font-weight:bold; padding:4px 8px; font-size:0.75rem; border-radius:4px; z-index:2;">${card.preco || "R$ 10,00"}</div>
+                <img src="${card.capa_url || card.capa}" alt="${card.titulo}">
                 <h4>${card.titulo}</h4>
             `;
             gridVitrine.appendChild(divVitrine);
         }
     });
 
-    // Exibe ou oculta o painel expansível de compras dependendo se há itens nele
     areaCompraPendente.style.display = contemPatchesParaComprar ? "block" : "none";
 }
 
@@ -340,7 +291,7 @@ function abrirModalDetalhesJogo(cardId, jaAdquirido) {
     if (!card) return;
 
     document.getElementById("modal-jogo-titulo").innerText = card.titulo;
-    document.getElementById("modal-jogo-capa").src = card.capa;
+    document.getElementById("modal-jogo-capa").src = card.capa_url || card.capa;
     document.getElementById("modal-jogo-descricao").innerText = card.descricao;
 
     const containerSenha = document.getElementById("container-senha-protegida-modal");
@@ -348,31 +299,28 @@ function abrirModalDetalhesJogo(cardId, jaAdquirido) {
     const btnAdquirir = document.getElementById("btn-adquirir-patch-vitrine");
     const blocoPixPreview = document.getElementById("bloco-pix-dinamico-preview");
 
-    // Reinicializações e limpezas internas da estrutura flutuante
     areaBotoes.innerHTML = "";
     document.getElementById("area-texto-senha-secreta").style.display = "none";
     document.getElementById("btn-revelar-senha-modal").style.display = "block";
 
     if (jaAdquirido) {
-        // Modo Download Liberado
         btnAdquirir.style.display = "none";
         blocoPixPreview.style.display = "none";
 
-        if (card.senhaPatch) {
+        if (card.senha_patch || card.senhaPatch) {
             containerSenha.style.display = "block";
-            document.getElementById("texto-senha-secreta-real").innerText = card.senhaPatch;
+            document.getElementById("texto-senha-secreta-real").innerText = card.senha_patch || card.senhaPatch;
             document.getElementById("btn-copiar-senha-modal").onclick = () => {
-                navigator.clipboard.writeText(card.senhaPatch);
+                navigator.clipboard.writeText(card.senha_patch || card.senhaPatch);
                 alert("Senha do patch copiada com sucesso!");
             };
         } else {
             containerSenha.style.display = "none";
         }
 
-        // Renderiza botões dinâmicos de download configurados
         for (let i = 1; i <= 4; i++) {
-            const txt = card[`btnTxt${i}`];
-            const url = card[`btnUrl${i}`];
+            const txt = card[`btnTxt${i}`] || card[`btn_txt_${i}`];
+            const url = card[`btnUrl${i}`] || card[`btn_url_${i}`];
             if (txt && url) {
                 const a = document.createElement("a");
                 a.href = url;
@@ -385,7 +333,6 @@ function abrirModalDetalhesJogo(cardId, jaAdquirido) {
             }
         }
     } else {
-        // Modo Vitrine de Vendas Ativa
         containerSenha.style.display = "none";
         areaBotoes.innerHTML = "";
         btnAdquirir.style.display = "block";
@@ -417,12 +364,11 @@ function fecharModalJogo() {
     document.getElementById("modal-details-container-gamer").style.display = "none";
 }
 
-// Configurações do Form de Envio de Comprovantes de Compra (Checkout)
+// Checkout de Inscrição
 function abrirCheckoutFormularioCompra(cardId) {
     const card = todosOsCards[cardId];
     if (!card) return;
 
-    // Vincula o cardId no campo oculto do formulário (GARANTE O ENVIO DO CARD CORRETO AO ADMIN)
     document.getElementById("id-card-escolhido-compra").value = cardId;
     document.getElementById("titulo-envio-comprovante-dinamico").innerText = `Confirmar Inscrição: ${card.titulo}`;
     document.getElementById("texto-preco-modal-checkout").innerText = card.preco || "R$ 10,00";
@@ -456,7 +402,7 @@ function configurarUploadComprovante() {
         const arquivo = fileInput.files[0];
 
         if (!arquivo) {
-            alert("Por favor, selecione ou arraste o arquivo de imagem do seu comprovante antes de finalizar.");
+            alert("Por favor, selecione ou arraste o arquivo do seu comprovante.");
             return;
         }
 
@@ -476,7 +422,7 @@ function configurarUploadComprovante() {
                 statusSolicitacao: "pendente",
                 dataEnvio: new Date().toLocaleString("pt-BR")
             }).then(() => {
-                alert("Seu comprovante foi enviado com sucesso! Aguarde a liberação dos moderadores.");
+                alert("Seu comprovante foi enviado com sucesso!");
                 document.getElementById("modal-formulario-envio").classList.remove("active");
                 document.getElementById("form-comprovante").reset();
                 fileInfo.innerText = "Nenhum arquivo selecionado";
@@ -485,7 +431,7 @@ function configurarUploadComprovante() {
     });
 }
 
-// Configurações do Perfil do Cliente
+// Perfil do Cliente
 function configurarPerfilCliente() {
     const btnAbrir = document.getElementById("btn-abrir-perfil");
     const btnFechar = document.getElementById("btn-fechar-perfil");
@@ -515,14 +461,13 @@ function configurarPerfilCliente() {
         });
     });
 
-    // Evento de Pedido de Autoexclusão por parte do Usuário Cliente
     const btnExcluir = document.getElementById("btn-solicitar-exclusao-conta");
     if(btnExcluir) {
         btnExcluir.addEventListener("click", () => {
-            if(confirm("ATENÇÃO: Deseja realmente solicitar a exclusão de todos os seus dados deste sistema? Seu acesso será revogado permanentemente e não poderá ser desfeito.")) {
+            if(confirm("Deseja realmente solicitar a exclusão de todos os seus dados?")) {
                 db.ref("usuarios/" + usuarioLogadoUid).update({ status: "excluido" })
                     .then(() => {
-                        alert("Sua solicitação foi processada e sua conta foi colocada em exclusão da base de dados.");
+                        alert("Sua conta foi colocada em exclusão.");
                         modalPerfil.classList.remove("active");
                     });
             }
@@ -530,7 +475,7 @@ function configurarPerfilCliente() {
     }
 }
 
-// Renderização Dinâmica do Menu Horizontal Suspenso no Cliente
+// Renderização do Menu Horizontal Suspenso
 function renderizarMenuHorizontalCliente(listaMenu) {
     const containerUl = document.getElementById("container-links-menu");
     if (!containerUl) return;
@@ -564,7 +509,7 @@ function renderizarMenuHorizontalCliente(listaMenu) {
 }
 
 // ==========================================================================
-// SEÇÃO DO PAINEL DE CONTROLE ADMINISTRATIVO (COMPLETA E INTACTA)
+// SEÇÃO DO PAINEL DE CONTROLE ADMINISTRATIVO (COMPLETA E RESTAURADA)
 // ==========================================================================
 function configurarAbasPainelAdmin() {
     const tabPend = document.getElementById("tab-solic-pendentes");
@@ -602,25 +547,24 @@ function configurarFormularioCadastroCards() {
         const senhaPatch = document.getElementById("card-senha-patch").value.trim();
 
         const cardData = {
-            titulo, capa, descricao, preco, pix, senhaPatch,
-            btnTxt1: document.getElementById("btn-txt-1").value.trim(),
-            btnUrl1: document.getElementById("btn-url-1").value.trim(),
-            btnTxt2: document.getElementById("btn-txt-2").value.trim(),
-            btnUrl2: document.getElementById("btn-url-2").value.trim(),
-            btnTxt3: document.getElementById("btn-txt-3").value.trim(),
-            btnUrl3: document.getElementById("btn-url-3").value.trim(),
-            btnTxt4: document.getElementById("btn-txt-4").value.trim(),
-            btnUrl4: document.getElementById("btn-url-4").value.trim()
+            titulo, capa_url: capa, descricao, preco, pix, senha_patch: senhaPatch,
+            btn_txt_1: document.getElementById("btn-txt-1").value.trim(),
+            btn_url_1: document.getElementById("btn-url-1").value.trim(),
+            btn_txt_2: document.getElementById("btn-txt-2").value.trim(),
+            btn_url_2: document.getElementById("btn-url-2").value.trim(),
+            btn_txt_3: document.getElementById("btn-txt-3").value.trim(),
+            btn_url_3: document.getElementById("btn-url-3").value.trim(),
+            btn_txt_4: document.getElementById("btn-txt-4").value.trim(),
+            btn_url_4: document.getElementById("btn-url-4").value.trim()
         };
 
         if (idEdicao) {
-            db.ref("cards_jogos/" + idEdicao).update(cardData).then(() => {
+            db.ref("cards_disponiveis/" + idEdicao).update(cardData).then(() => {
                 alert("Card atualizado com sucesso!");
                 limparFormularioCardAdmin();
             });
         } else {
-            const novoCardRef = db.ref("cards_jogos").push();
-            cardData.id = novoCardRef.key;
+            const novoCardRef = db.ref("cards_disponiveis").push();
             novoCardRef.set(cardData).then(() => {
                 alert("Novo Card de Jogo cadastrado com sucesso!");
                 limparFormularioCardAdmin();
@@ -643,15 +587,15 @@ function carregarCardParaEdicao(id) {
 
     document.getElementById("card-id-edicao").value = id;
     document.getElementById("card-titulo").value = card.titulo || "";
-    document.getElementById("card-capa").value = card.capa || "";
+    document.getElementById("card-capa").value = card.capa_url || card.capa || "";
     document.getElementById("card-descricao").value = card.descricao || "";
     document.getElementById("card-preco").value = card.preco || "";
     document.getElementById("card-pix").value = card.pix || "";
-    document.getElementById("card-senha-patch").value = card.senhaPatch || "";
+    document.getElementById("card-senha-patch").value = card.senha_patch || card.senhaPatch || "";
     
     for (let i = 1; i <= 4; i++) {
-        document.getElementById(`btn-txt-${i}`).value = card[`btnTxt${i}`] || "";
-        document.getElementById(`btn-url-${i}`).value = card[`btnUrl${i}`] || "";
+        document.getElementById(`btn-txt-${i}`).value = card[`btn_txt_${i}`] || card[`btnTxt${i}`] || "";
+        document.getElementById(`btn-url-${i}`).value = card[`btn_url_${i}`] || card[`btnUrl${i}`] || "";
     }
 
     document.getElementById("titulo-form-card").innerText = "📝 Editando Card Existente";
@@ -661,11 +605,10 @@ function carregarCardParaEdicao(id) {
 
 function deletarCardJogoAdmin(id) {
     if (confirm("Deseja realmente remover este card permanentemente do sistema?")) {
-        db.ref("cards_jogos/" + id).remove().then(() => alert("Card excluído com sucesso!"));
+        db.ref("cards_disponiveis/" + id).remove().then(() => alert("Card excluído com sucesso!"));
     }
 }
 
-// Renderiza a lista de gerenciamento na lateral esquerda do painel Admin
 function renderizarPainelControleAdmin() {
     const containerListaCards = document.getElementById("lista-cards-criados");
     if(containerListaCards) {
@@ -708,7 +651,7 @@ function renderizarPainelControleAdmin() {
 
             if (sol.statusSolicitacao === statusFiltroAlvo) {
                 contadorFiltro++;
-                const card = todosOsCards[sol.cardId] || { titulo: "Card Removido/Inexistente" };
+                const card = todosOsCards[sol.cardId] || { titulo: "Card Removido" };
                 const div = document.createElement("div");
                 div.className = "user-item-box";
                 
@@ -734,7 +677,6 @@ function renderizarPainelControleAdmin() {
                             <h4>${sol.nomeUsuario}</h4>
                             <p>WhatsApp: <strong>${sol.whatsappUsuario}</strong></p>
                             <p>Item Adquirido: <strong style="color:#00ff66;">${card.titulo}</strong></p>
-                            <p>Data de Envio: ${sol.dataEnvio || "Não registrada"}</p>
                         </div>
                         <span class="badge-status ${sol.statusSolicitacao}">${sol.statusSolicitacao}</span>
                     </div>
@@ -748,7 +690,7 @@ function renderizarPainelControleAdmin() {
         });
 
         if(contadorFiltro === 0) {
-            containerListaPedidosUsuarios.innerHTML = `<div style="text-align:center; color:#667788; padding:30px; font-size:0.85rem;">Nenhuma inscrição ou comprovante nesta aba no momento.</div>`;
+            containerListaPedidosUsuarios.innerHTML = `<div style="text-align:center; color:#667788; padding:30px; font-size:0.85rem;">Nenhuma inscrição nesta aba.</div>`;
         }
     } else if (abaSolicitacoesAtivaAdmin === "cadastrados") {
         db.ref("usuarios").once("value", snapshot => {
@@ -764,7 +706,7 @@ function renderizarPainelControleAdmin() {
                 if(u.regra !== "admin") {
                     btnAcaoUser = `<button onclick="promoverUsuarioParaAdmin('${u.uid}')" class="btn-visualizar-comprovante" style="margin-top:10px; font-size:0.7rem; padding:4px 8px; border-color:#00ff66; color:#00ff66;">Promover a Admin</button>`;
                 } else {
-                    btnAcaoUser = `<span style="font-size:0.7rem; color:#ffcc00; display:block; margin-top:10px; font-weight:bold;">👑 Usuário Administrador Geral</span>`;
+                    btnAcaoUser = `<span style="font-size:0.7rem; color:#ffcc00; display:block; margin-top:10px; font-weight:bold;">👑 Administrador Geral</span>`;
                 }
 
                 itemUser.innerHTML = `
@@ -773,7 +715,6 @@ function renderizarPainelControleAdmin() {
                             <h4>${u.nome || "Sem Nome"} ${u.sobrenome || ""}</h4>
                             <p>E-mail: ${u.email}</p>
                             <p>WhatsApp: ${u.whatsapp || "Não cadastrado"}</p>
-                            <p>Status Interno: <strong style="color:${u.status === 'excluido' ? '#ff3333' : '#00ff66'}">${u.status || 'ativo'}</strong></p>
                         </div>
                         <span class="badge-status cliente">${u.regra || 'cliente'}</span>
                     </div>
@@ -781,9 +722,6 @@ function renderizarPainelControleAdmin() {
                 `;
                 containerListaPedidosUsuarios.appendChild(itemUser);
             });
-            if(countUsers === 0) {
-                containerListaPedidosUsuarios.innerHTML = `<div style="text-align:center; color:#667788; padding:30px; font-size:0.85rem;">Nenhum usuário registrado na base.</div>`;
-            }
         });
     }
 }
@@ -794,13 +732,12 @@ function alterarStatusPedidoCliente(solicitacaoId, novoStatus) {
 }
 
 function promoverUsuarioParaAdmin(uid) {
-    if(confirm("Deseja promover este usuário a Administrador? Ele terá controle total sobre os patchs e inscrições.")) {
+    if(confirm("Deseja promover este usuário a Administrador?")) {
         db.ref(`usuarios/${uid}`).update({ regra: "admin" })
             .then(() => alert("Usuário promovido com sucesso!"));
     }
 }
 
-// Construtor Visual do Menu Horizontal na Interface do Admin
 function renderizarConstrutorVisualMenuAdmin() {
     const container = document.getElementById("construtor-menu-visual-container");
     if (!container) return;
@@ -808,7 +745,7 @@ function renderizarConstrutorVisualMenuAdmin() {
     container.innerHTML = "";
 
     if (estruturaLayoutMenuVisual.length === 0) {
-        container.innerHTML = `<p style="color:#667788; font-size:0.8rem; font-style:italic; text-align:center;">Nenhum link ou categoria adicionado no momento.</p>`;
+        container.innerHTML = `<p style="color:#667788; font-size:0.8rem; font-style:italic; text-align:center;">Nenhum link ou categoria adicionado.</p>`;
         return;
     }
 
@@ -822,8 +759,8 @@ function renderizarConstrutorVisualMenuAdmin() {
                 linksHtml += `
                     <div class="linha-link-visual">
                         <input type="text" value="${l.texto}" placeholder="Texto do Link" oninput="atualizarCampoTextoMenuVisual(${indexCat}, ${indexLink}, 'texto', this.value)" style="flex:1; background:#0b0e14; border:1px solid #1f2a3c; padding:6px; color:#fff; font-size:0.8rem; border-radius:4px;">
-                        <input type="url" value="${l.url}" placeholder="URL de Destino" oninput="atualizarCampoTextoMenuVisual(${indexCat}, ${indexLink}, 'url', this.value)" style="flex:1.5; background:#0b0e14; border:1px solid #1f2a3c; padding:6px; color:#fff; font-size:0.8rem; border-radius:4px;">
-                        <button type="button" onclick="removerLinkMenuVisual(${indexCat}, ${indexLink})" style="background:none; border:none; color:#ff3333; cursor:pointer; padding:0 5px;">❌</button>
+                        <input type="url" value="${l.url}" placeholder="URL" oninput="atualizarCampoTextoMenuVisual(${indexCat}, ${indexLink}, 'url', this.value)" style="flex:1.5; background:#0b0e14; border:1px solid #1f2a3c; padding:6px; color:#fff; font-size:0.8rem; border-radius:4px;">
+                        <button type="button" onclick="removerLinkMenuVisual(${indexCat}, ${indexLink})" style="background:none; border:none; color:#ff3333; cursor:pointer;">❌</button>
                     </div>
                 `;
             });
@@ -831,8 +768,8 @@ function renderizarConstrutorVisualMenuAdmin() {
 
         blocoCat.innerHTML = `
             <div class="bloco-categoria-header">
-                <input type="text" value="${cat.categoria}" placeholder="Nome da Categoria" oninput="atualizarNomeCategoriaMenuVisual(${indexCat}, this.value)" style="flex:1; background:#0b0e14; border:1px solid #1f2a3c; padding:8px; color:#ffcc00; font-weight:bold; font-size:0.85rem; border-radius:4px;">
-                <button type="button" onclick="removerCategoriaMenuVisual(${indexCat})" class="btn-recusar-pedido" style="margin:0; padding:4px 10px; font-size:0.75rem;">Excluir Categoria</button>
+                <input type="text" value="${cat.categoria}" oninput="atualizarNomeCategoriaMenuVisual(${indexCat}, this.value)" style="flex:1; background:#0b0e14; border:1px solid #1f2a3c; padding:8px; color:#ffcc00; font-weight:bold; font-size:0.85rem; border-radius:4px;">
+                <button type="button" onclick="removerCategoriaMenuVisual(${indexCat})" class="btn-recusar-pedido" style="margin:0; padding:4px 10px; font-size:0.75rem;">Excluir</button>
             </div>
             <div class="lista-links-visual-container">${linksHtml}</div>
             <button type="button" onclick="adicionarLinkEmCategoriaVisual(${indexCat})" class="btn-visualizar-comprovante" style="margin:0; font-size:0.7rem; padding:4px 8px;">+ Adicionar Link</button>
@@ -841,7 +778,6 @@ function renderizarConstrutorVisualMenuAdmin() {
     });
 }
 
-// Funções lógicas de manipulação do Construtor Visual do Menu
 function adicionarBlocoCategoriaVisual() {
     estruturaLayoutMenuVisual.push({ categoria: "NOVA CATEGORIA", links: [] });
     renderizarConstrutorVisualMenuAdmin();
@@ -867,41 +803,29 @@ function atualizarCampoTextoMenuVisual(indexCat, indexLink, campo, valor) {
 }
 function salvarLayoutMenuNoFirebase() {
     db.ref("configuracao_menu_horizontal").set(estruturaLayoutMenuVisual)
-        .then(() => alert("Menu horizontal salvo e publicado com sucesso para todos os clientes!"));
+        .then(() => alert("Menu salvo com sucesso!"));
 }
 
-// Exportador estrutural de Cards para Backup de Segurança (JSON)
 function exportarCardsParaJSON() {
     const dadosConvertidosStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(todosOsCards, null, 2));
     const elementoDownloadAuxiliar = document.createElement("a");
     elementoDownloadAuxiliar.setAttribute("href", dadosConvertidosStr);
-    elementoDownloadAuxiliar.setAttribute("download", `backup_cards_hub_gamer_${new Date().toLocaleDateString().replace(/\//g, '_')}.json`);
+    elementoDownloadAuxiliar.setAttribute("download", `backup_cards_hub_gamer.json`);
     document.body.appendChild(elementoDownloadAuxiliar);
     elementoDownloadAuxiliar.click();
     elementoDownloadAuxiliar.remove();
 }
 
-// Arquivamento e Reset Geral de Pré-vendas da Temporada (Garante a limpeza das tabelas)
-function ejecutarResetGeralTemporadaPreVenda() {
-    if (confirm("🚨 ALERTA CRÍTICO: Deseja realmente ARQUIVAR e limpar todas as inscrições APROVADAS desta temporada? Os clientes perderão o acesso imediato aos downloads liberados para reincorporação de um novo ciclo comercial. Certifique-se de ter feito backup.")) {
-        if (confirm("Confirmação final: Deseja prosseguir com a limpeza e arquivamento?")) {
-            let chavesParaRemover = [];
-            Object.keys(solicitacoesGeraisDoBanco).forEach(key => {
-                if (solicitacoesGeraisDoBanco[key].statusSolicitacao === "aprovado") {
-                    chavesParaRemover.push(key);
-                }
-            });
-
-            if(chavesParaRemover.length === 0) {
-                alert("Nenhuma inscrição aprovada foi localizada na base para remoção.");
-                return;
+function executarResetGeralTemporadaPreVenda() {
+    if (confirm("Deseja redefinir as pré-vendas?")) {
+        let chavesParaRemover = [];
+        Object.keys(solicitacoesGeraisDoBanco).forEach(key => {
+            if (solicitacoesGeraisDoBanco[key].statusSolicitacao === "aprovado") {
+                chavesParaRemover.push(key);
             }
-
-            let tarefasRemocao = chavesParaRemover.map(key => db.ref(`solicitacoes_comprovantes/${key}`).remove());
-            Promise.all(tarefasRemocao).then(() => {
-                alert(`Sucesso! Foram removidos/arquivados ${chavesParaRemover.length} registros de patchs liberados da tabela ativa.`);
-            });
-        }
+        });
+        let tarefasRemocao = chavesParaRemover.map(key => db.ref(`solicitacoes_comprovantes/${key}`).remove());
+        Promise.all(tarefasRemocao).then(() => alert("Temporada redefinida!"));
     }
 }
 
