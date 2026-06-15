@@ -88,7 +88,7 @@ document.getElementById('tab-cadastro').addEventListener('click', () => {
     document.getElementById('form-cadastro-auth').classList.add('active');
     document.getElementById('form-login').classList.remove('active');
     document.getElementById('tab-cadastro').classList.add('active');
-    document.getElementById('tab-login').classList.remove('active');
+    document.getElementById('tab-login').classList.add('active');
 });
 
 // Configuração das 3 Abas do Admin
@@ -255,7 +255,7 @@ document.getElementById('form-editar-perfil-cliente').addEventListener('submit',
         await database.ref(`usuarios/${usuarioLogadoUid}/nome`).set(nome);
         await database.ref(`usuarios/${usuarioLogadoUid}/sobrenome`).set(sobrenome);
         await database.ref(`usuarios/${usuarioLogadoUid}/whatsapp`).set(whatsapp);
-        alert("🚀 Perfil atualizado com sucesso!");
+        alert("🚀 Perfil updated com sucesso!");
         modalEditarPerfil.classList.remove('active');
     } catch(err) { alert("Erro ao atualizar: " + err.message); }
 });
@@ -377,7 +377,7 @@ function ouvirCardsDoCliente(uid) {
                 <h4 style="color:#ffaa00;">Analisando seu Comprovante...</h4>
             `;
             cardAnalise.addEventListener('click', () => {
-                alert("🎮 SEU ACESSO ESTÁ SE SULCANDO!\n\nRecebemos o seu comprovante PIX com sucesso. Nossa equipe está validando o pagamento neste exato momento para injetar o seu Card de jogo aqui no painel.\n\nFique tranquilo, a liberação é rápida!");
+                alert("🎮 SEU ACESSO ESTÁ SENDO ANALISADO!\n\nRecebemos o seu comprovante PIX com sucesso. Nossa equipe está validando o pagamento neste exato momento para injetar o seu Card de jogo aqui no painel.\n\nFique tranquilo, a liberação é rápida!");
             });
             gridCardsCliente.appendChild(cardAnalise);
             return;
@@ -602,7 +602,7 @@ document.getElementById('form-criar-card').addEventListener('submit', async (e) 
     }
     const dadosCard = { titulo: document.getElementById('card-titulo').value.trim(), capa_url: document.getElementById('card-capa').value.trim(), descricao: document.getElementById('card-descricao').value.trim(), senha_patch: document.getElementById('card-senha-patch').value.trim(), botoes: botoes };
     try {
-        if (idEdicao) { await database.ref(`cards_disponiveis/${idEdicao}`).set(dadosCard); alert("🔄 Card updated!"); cancelarEdicaoCard(); }
+        if (idEdicao) { await database.ref(`cards_disponiveis/${idEdicao}`).set(dadosCard); alert("🔄 Card atualizado!"); cancelarEdicaoCard(); }
         else { await database.ref('cards_disponiveis').push(dadosCard); alert("🎯 Novo Card criado!"); document.getElementById('form-criar-card').reset(); }
     } catch (error) { alert("Erro: " + error.message); }
 });
@@ -680,11 +680,10 @@ function inicializarPainelAdmin() {
 
             if (filtroAdminAtual === "pendentes" && status === "pago") return;
             if (filtroAdminAtual === "pendentes" && status === "cliente_cadastrado") return;
-            if (filtroAdminAtual === "pendentes" && status === "solicitou_exclusao") return; // Vai pra aba de cadastrados
+            if (filtroAdminAtual === "pendentes" && status === "solicitou_exclusao") return; 
             
             if (filtroAdminAtual === "concluidos" && status !== "pago") return;
             
-            // A aba cadastrados herda tanto a base comum quanto os pedidos urgentes de destruição
             if (filtroAdminAtual === "cadastrados" && status !== "cliente_cadastrado" && status !== "solicitou_exclusao") return;
 
             contagemFiltrados++;
@@ -741,7 +740,7 @@ function inicializarPainelAdmin() {
                     <button class="btn-sair" onclick="excluirSolicitacaoEComprovante('${uid}')" style="width:100%; font-size:0.8rem; padding:6px; margin-top:10px; background:#2d1313; border:1px solid #ff3333; color:#ff3333;">📦 Mover Manualmente para Cadastrados (Recuar)</button>
                 `;
             } else {
-                // Aba de Cadastrados (Possui inteligência visual de exclusão pendente)
+                // Aba de Cadastrados (Possui inteligência de exclusão pendente em 1 clique)
                 let botoesAbaCadastrados = `
                     <div style="display:flex; gap:5px;">
                         <select id="select-game-${uid}" style="margin:0; flex:1; height:35px;"><option value="">Injetar Novo Patch Direto</option></select>
@@ -836,12 +835,18 @@ async function excluirSolicitacaoEComprovante(uid) {
     }
 }
 
+// ==========================================================================
+// FUNÇÃO DE EXCLUSÃO ADAPTADA (LIMPA O COMPONENTE VISUAL NA HORA)
+// ==========================================================================
 async function deletarUsuarioDoBancoTotal(uid, email) {
-    if (confirm(`🚨 DESTRUIÇÃO DO BANCO DE DADOS:\n\nDeseja apagar DEFINITIVAMENTE os registros comerciais e a lista de jogos do e-mail: ${email}?\n\nApós clicar em OK, limpe manualmente o login dele no Authentication do Console do Firebase.`)) {
+    if (confirm(`🚨 REMOÇÃO PERMANENTE DO BANCO:\n\nIsso vai apagar IMEDIATAMENTE todos os registros de jogos e cadastro de ${email} do banco de dados.\n\nO card sumirá da tela do Admin agora. Clique em OK para prosseguir.`)) {
         try {
+            // Remove o nó completo do banco. O listener do Firebase vai detectar e remover o card da tela automaticamente!
             await database.ref(`usuarios/${uid}`).remove();
-            alert("🔥 Dados deletados com sucesso no banco! Lembre-se de deletar o login no Firebase Auth se necessário.");
-        } catch(err) { alert("Erro: " + err.message); }
+            
+            // Exibe o alerta final orientando o Admin a fechar o ciclo no Authentication
+            alert(`🔥 Dados comerciais e jogos deletados com sucesso no banco!\n\nPASSO FINAL OBRIGATÓRIO:\n Vá até o Console do Firebase > Authentication e remova manualmente o usuário com o e-mail:\n 👉 ${email}`);
+        } catch(err) { alert("Erro ao limpar dados do banco: " + err.message); }
     }
 }
 
