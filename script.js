@@ -33,13 +33,14 @@ const perfWhatsApp = document.getElementById('perf-whatsapp');
 
 let usuarioLogadoUid = null;
 let dadosClienteAtual = {};
-let filtroAdminAtual = "pendentes"; // Filtros possíveis: pendentes, concluuidos, cadastrados
+let filtroAdminAtual = "pendentes";
 
 // Máscaras Dinâmicas para WhatsApp (Cadastro e Perfil)
 function aplicarMascaraWhats(elemento) {
     let value = elemento.value.replace(/\D/g, "");
     if (value.length > 11) value = value.slice(0, 11);
     if (value.length > 6) { value = `(${value.slice(0, 2)}) ${value.slice(2, 7)}-${value.slice(7)}`; }
+    else if (value.length > 2) { value = `(${value.slice(0, 2)}) ${value.slice(2)}`; }
     else if (value.length > 0) { value = `(${value}`; }
     elemento.value = value;
 }
@@ -87,7 +88,7 @@ document.getElementById('tab-cadastro').addEventListener('click', () => {
     document.getElementById('form-cadastro-auth').classList.add('active');
     document.getElementById('form-login').classList.remove('active');
     document.getElementById('tab-cadastro').classList.add('active');
-    document.getElementById('tab-login').classList.add('active');
+    document.getElementById('tab-login').classList.remove('active');
 });
 
 // Configuração das 3 Abas do Admin
@@ -133,7 +134,6 @@ auth.onAuthStateChanged(user => {
                 if (dados) {
                     dadosClienteAtual = dados;
 
-                    // Se a conta está marcada com pedido de exclusão, bloqueia a dashboard
                     if (dados.status_cadastro === "solicitou_exclusao") {
                         irParaTela(viewClienteBloqueado);
                         return;
@@ -254,17 +254,17 @@ document.getElementById('form-editar-perfil-cliente').addEventListener('submit',
         await database.ref(`usuarios/${usuarioLogadoUid}/nome`).set(nome);
         await database.ref(`usuarios/${usuarioLogadoUid}/sobrenome`).set(sobrenome);
         await database.ref(`usuarios/${usuarioLogadoUid}/whatsapp`).set(whatsapp);
-        alert("🚀 Perfil updated com sucesso!");
+        alert("🚀 Perfil atualizado com sucesso!");
         modalEditarPerfil.classList.remove('active');
     } catch(err) { alert("Erro ao atualizar: " + err.message); }
 });
 
 document.getElementById('btn-solicitar-exclusao-conta').addEventListener('click', async () => {
-    const conf = confirm("🚨 ATENÇÃO - DESTRUIÇÃO DE CONTA:\n\nTem certeza absoluta de que deseja solicitar a exclusão total da sua conta e da sua biblioteca de patches adquiridos?\n\nEsta ação NÃO pode ser desfeita e seu acesso será bloqueado imediatamente.");
+    const conf = confirm("🚨 ATENÇÃO:\n\nTem certeza absoluta de que deseja solicitar a exclusão total da sua conta?\n\nSeu acesso será revogado e os dados limpos pelo administrador.");
     if (conf) {
         try {
             await database.ref(`usuarios/${usuarioLogadoUid}/status_cadastro`).set("solicitou_exclusao");
-            alert("Pedido de exclusão enviado! Seu acesso foi suspenso.");
+            alert("Pedido enviado com sucesso!");
             modalEditarPerfil.classList.remove('active');
         } catch(err) { alert("Erro: " + err.message); }
     }
@@ -282,7 +282,7 @@ document.getElementById('form-cadastro-auth').addEventListener('submit', async (
     const senha = document.getElementById('cad-senha').value;
 
     if (!validarProvedorEmail(email)) {
-        alert("⚠️ Inscrição Recusada! Utilize um e-mail legítimo/convencional para garantir suporte.");
+        alert("⚠️ Inscrição Recusada! Utilize um e-mail legítimo convencional.");
         return;
     }
     try {
@@ -313,7 +313,7 @@ document.getElementById('btn-esqueci-senha').addEventListener('click', async () 
     if (!email) { alert("⚠️ Digite o seu e-mail no campo acima."); return; }
     try {
         await auth.sendPasswordResetEmail(email);
-        alert(`🚀 Link de redefinição enviado com sucesso para: ${email}`);
+        alert(`🚀 Link enviado com sucesso para: ${email}`);
     } catch (error) { alert("Erro: " + error.message); }
 });
 
@@ -357,6 +357,7 @@ document.getElementById('form-comprovante').addEventListener('submit', async (e)
     finally { btn.innerText = "CONCLUIR INSCRIÇÃO"; btn.disabled = false; }
 });
 
+// RESTAURADO: FILTRAGEM E RENDERIZAÇÃO ORIGINAL DOS CARDS GAMER DO CLIENTE
 function ouvirCardsDoCliente(uid) {
     database.ref(`usuarios/${uid}`).on('value', snapshotUsuario => {
         gridCardsCliente.innerHTML = "";
@@ -364,21 +365,22 @@ function ouvirCardsDoCliente(uid) {
         const liberados = dadosUser.jogos_liberados || {};
         const chavesLiberadas = Object.keys(liberados);
 
+        // Se ele comprou pela primeira vez, renderiza o card padrão de análise do grid original
         if (dadosUser.status_cadastro === "comprovante_enviado" && chavesLiberadas.length === 0) {
-            const cardAnalise = document.createElement('div');
-            cardAnalise.className = 'game-card';
-            cardAnalise.style.border = "2px dashed #00ff66";
-            cardAnalise.style.background = "linear-gradient(135deg, #121824 0%, #111f16 100%)";
-            cardAnalise.innerHTML = `
-                <div style="width:100%; height:280px; display:flex; align-items:center; justify-content:center; background:rgba(0,255,102,0.03);">
-                    <span style="font-size:5rem; animation: fadeIn 1s infinite alternate;">⏳</span>
+            const cardElement = document.createElement('div');
+            cardElement.className = 'game-card';
+            cardElement.style.borderColor = "#00ff66";
+            // Usa a estrutura de div limpa do seu layout original para o card de carregamento
+            cardElement.innerHTML = `
+                <div style="height:280px; display:flex; align-items:center; justify-content:center; background:#161c26;">
+                    <span style="font-size:4rem; animation: fadeIn 1s infinite alternate;">⏳</span>
                 </div>
-                <h4 style="color:#00ff66;">Analisando seu Comprovante...</h4>
+                <h4>Analisando Comprovante...</h4>
             `;
-            cardAnalise.addEventListener('click', () => {
-                alert("🎮 SEU ACESSO ESTÁ SENDO ANALISADO!\n\nRecebemos o seu comprovante PIX com sucesso. Nossa equipe está validando o pagamento neste exato momento para injetar o seu Card de jogo aqui no painel.\n\nFique tranquilo, a liberação é rápida!");
+            cardElement.addEventListener('click', () => {
+                alert("🎮 SEU ACESSO ESTÁ SENDO ANALISADO!\n\nRecebemos o seu comprovante PIX com sucesso. Nossa equipe está validando o pagamento para injetar o seu Card de jogo aqui no painel.");
             });
-            gridCardsCliente.appendChild(cardAnalise);
+            gridCardsCliente.appendChild(cardElement);
             return;
         }
 
@@ -485,7 +487,8 @@ function ouvirEConstruirMenuCliente() {
 }
 
 function inicializarBotaoWhatsApp() {
-    const whatsappNumero = "5500000000000"; 
+    // Configura o link direto da API oficial do WhatsApp usando o número do suporte
+    const whatsappNumero = "5588988470190"; 
     document.getElementById('btn-whatsapp-flutuante').href = `https://api.whatsapp.com/send?phone=${whatsappNumero}&text=Ol%C3%A1,%20preciso%20de%20ajuda%20no%20Hub!`;
 }
 
@@ -573,8 +576,8 @@ document.getElementById('btn-salvar-visual-menu').addEventListener('click', asyn
         else {
             const linesSub = bloco.querySelectorAll('.linha-subcategoria-visual');
             linesSub.forEach(linha => {
-                const txt = inlineTxt = inlineTxt = linha.querySelector('.sub-txt').value.trim();
-                const url = inlineTxt = linha.querySelector('.sub-url').value.trim();
+                const txt = linha.querySelector('.sub-txt').value.trim();
+                const url = linha.querySelector('.sub-url').value.trim();
                 if (txt && url) subcategorias.push({ texto: txt, url: url });
                 else if (txt || url) dadosValidos = false;
             });
@@ -584,7 +587,7 @@ document.getElementById('btn-salvar-visual-menu').addEventListener('click', asyn
     if (!dadosValidos) { alert("⚠️ Existem campos incompletos no construtor."); return; }
     try {
         await database.ref('configuracao_menu_json').set(estruturaMenuFinal.length > 0 ? JSON.stringify(estruturaMenuFinal, null, 2) : "");
-        alert("🚀 Menu Horizontal updated com sucesso!");
+        alert("🚀 Menu Horizontal atualizado com sucesso!");
     } catch (e) { alert("Erro: " + e.message); }
 });
 
@@ -690,7 +693,7 @@ function inicializarPainelAdmin() {
             userBox.className = 'user-item';
 
             if (status === "solicitou_exclusao") {
-                userBox.classList.add('solicitou-exclusao');
+                userBox.style.border = "2px solid #ff3333";
             }
 
             let listaJogosAtivosHtml = "";
@@ -739,7 +742,6 @@ function inicializarPainelAdmin() {
                     <button class="btn-sair" onclick="excluirSolicitacaoEComprovante('${uid}')" style="width:100%; font-size:0.8rem; padding:6px; margin-top:10px; background:#2d1313; border:1px solid #ff3333; color:#ff3333;">📦 Mover Manualmente para Cadastrados (Recuar)</button>
                 `;
             } else {
-                // Aba de Cadastrados (Possui inteligência de exclusão em 1 clique)
                 let botoesAbaCadastrados = `
                     <div style="display:flex; gap:5px;">
                         <select id="select-game-${uid}" style="margin:0; flex:1; height:35px;"><option value="">Injetar Novo Patch Direto</option></select>
@@ -749,9 +751,9 @@ function inicializarPainelAdmin() {
 
                 if (status === "solicitou_exclusao") {
                     botoesAbaCadastrados = `
-                        <div style="background:#281216; border:1px solid var(--accent-perigo); padding:10px; border-radius:4px; text-align:center;">
-                            <p style="color:var(--accent-perigo); font-weight:bold; font-size:0.85rem; margin-bottom:8px;">⚠️ O USUÁRIO SOLICITOU A EXCLUSÃO DA CONTA</p>
-                            <button class="btn-gamer" style="background:var(--accent-perigo); color:#fff; font-size:0.8rem; padding:8px;" onclick="deletarUsuarioDoBancoTotal('${uid}', '${users[uid].email}')">🚨 APAGAR DADOS DO BANCO TOTAL</button>
+                        <div style="background:#281216; border:1px solid #ff3333; padding:10px; border-radius:4px; text-align:center;">
+                            <p style="color:#ff3333; font-weight:bold; font-size:0.85rem; margin-bottom:8px;">⚠️ O USUÁRIO SOLICITOU A EXCLUSÃO DA CONTA</p>
+                            <button class="btn-gamer" style="background:#ff3333; color:#fff; font-size:0.8rem; padding:8px;" onclick="deletarUsuarioDoBancoTotal('${uid}', '${users[uid].email}')">🚨 DESSASSINAR DADOS DO BANCO TOTAL</button>
                         </div>
                     `;
                 }
@@ -810,7 +812,7 @@ async function injetarCardParaUsuario(uid) {
         await database.ref(`usuarios/${uid}/status_cadastro`).set("pago");
         if (selectedCardId) {
             await database.ref(`usuarios/${uid}/jogos_liberados/${selectedCardId}`).set(true);
-            alert("🔥 Sucesso! Jogador movido para Aprovados com o novo card injetado!");
+            alert("🔥 Sucesso! Jogador movido para Aprovados!");
         } else {
             alert("Status atualizado para PAGO!");
         }
@@ -825,7 +827,7 @@ async function removerAcessoJogo(uid, gameId) {
 }
 
 async function excluirSolicitacaoEComprovante(uid) {
-    if (confirm("Deseja arquivar e mover este cliente para a aba de 'Clientes Cadastrados'?\n\nIsso limpará o comprovante atual permitindo que ele faça novas compras futuramente, mantendo o login e os jogos dele intactos.")) {
+    if (confirm("Deseja arquivar e mover este cliente para a aba de 'Clientes Cadastrados'?")) {
         try {
             await database.ref(`usuarios/${uid}/comprovante_base64`).set("");
             await database.ref(`usuarios/${uid}/status_cadastro`).set("cliente_cadastrado");
@@ -834,23 +836,17 @@ async function excluirSolicitacaoEComprovante(uid) {
     }
 }
 
-// ==========================================================================
-// FUNÇÃO DE EXCLUSÃO ADAPTADA (LIMPA O COMPONENTE VISUAL NA HORA)
-// ==========================================================================
 async function deletarUsuarioDoBancoTotal(uid, email) {
-    if (confirm(`🚨 REMOÇÃO PERMANENTE DO BANCO:\n\nIsso vai apagar IMEDIATAMENTE todos os registros de jogos e cadastro de ${email} do banco de dados.\n\nO card sumirá da tela do Admin agora. Clique em OK para prosseguir.`)) {
+    if (confirm(`🚨 REMOÇÃO PERMANENTE DO BANCO:\n\nIsso vai apagar os registros do e-mail: ${email}.\n\nClique em OK para prosseguir.`)) {
         try {
-            // Remove o nó completo do banco. O listener do Firebase vai detectar e remover o card da tela automaticamente!
             await database.ref(`usuarios/${uid}`).remove();
-            
-            // Exibe o alerta final orientando o Admin a fechar o ciclo no Authentication
-            alert(`🔥 Dados comerciais e jogos deletados com sucesso no banco!\n\nPASSO FINAL OBRIGATÓRIO:\n Vá até o Console do Firebase > Authentication e remova manualmente o usuário com o e-mail:\n 👉 ${email}`);
+            alert(`🔥 Dados deletados com sucesso no banco!\n\nPASSO FINAL OBRIGATÓRIO:\nRemova manualmente o usuário no Auth usando o e-mail:\n 👉 ${email}`);
         } catch(err) { alert("Erro ao limpar dados do banco: " + err.message); }
     }
 }
 
 document.getElementById('btn-reset-geral-temporada').addEventListener('click', async () => {
-    const conf1 = confirm("⚠️ ATENÇÃO - FIM DA PRÉ-VENDA:\n\nVocê vai fechar as vendas da temporada atual.\n\nTodos os jogadores Aprovados serão movidos com segurança para a aba 'Clientes Cadastrados'.\nO login deles continuará funcionando e eles NÃO perderão os jogos antigos, mas o Hub deles voltará a pedir o comprovante assim que você lançar um novo Card!\n\nDeseja continuar?");
+    const conf1 = confirm("⚠️ ATENÇÃO - FIM DA PRÉ-VENDA:\n\nDeseja continuar?");
     if (conf1) {
         try {
             const btnReset = document.getElementById('btn-reset-geral-temporada');
