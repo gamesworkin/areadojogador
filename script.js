@@ -119,7 +119,6 @@ auth.onAuthStateChanged(user => {
                     const areaPendente = document.getElementById('area-compra-pendente');
                     const btnAbrirForm = document.getElementById('btn-abrir-formulario');
 
-                    // MODIFICAÇÃO CIRÚRGICA: Clientes Cadastrados voltam a ver a caixa de alertas se houver novos patches
                     if (!temCardDisponivelParaComprar) {
                         areaPendente.style.display = "none";
                     } else {
@@ -136,7 +135,6 @@ auth.onAuthStateChanged(user => {
                             btnAbrirForm.className = "btn-gamer btn-nova-compra";
                             btnAbrirForm.style.display = "inline-block";
                         } else {
-                            // Cobre 'pendente_pagamento' e o novo status 'cliente_cadastrado'
                             document.getElementById('texto-alerta-titulo').innerText = "Garanta as Novas Atualizações!";
                             document.getElementById('texto-alerta-desc').innerText = "Envie o seu novo comprovante PIX para liberar os patches recentes no seu painel.";
                             btnAbrirForm.innerText = "Adquirir Lançamento";
@@ -186,11 +184,11 @@ function executarCopiaGamerBlindada(textoParaCopiar, elementoBotao) {
             executarMetodoCopiaAntigo(textoParaCopiar, elementoBotao, textoOriginal);
         });
     } else {
-        executarMetopiaAntigo(textoParaCopiar, elementoBotao, textoOriginal);
+        executarMetodoCopiaAntigo(textoParaCopiar, elementoBotao, textoOriginal);
     }
 }
 
-function executarMetodoCopiaAntigo(texto, botao, textoOrig) {
+function ejecutarMetodoCopiaAntigo(texto, botao, textoOrig) {
     const textarea = document.createElement("textarea");
     textarea.value = texto;
     textarea.style.position = "fixed"; textarea.style.opacity = "0";
@@ -260,7 +258,7 @@ document.getElementById('btn-esqueci-senha').addEventListener('click', async () 
 
 // Envio de Comprovante
 document.getElementById('btn-abrir-formulario').addEventListener('click', () => modalFormEnvio.classList.add('active'));
-document.getElementById('btn-fechar-form').addEventListener('click', () => modalFormEnvio.classList.remove('active'));
+document.getElementById('btn-fechar-form').addEventListener('click', () => modalFormEnvio.remove('active'));
 
 const inputComprovante = document.getElementById('comprovante');
 const dropZone = document.getElementById('drop-zone');
@@ -298,12 +296,38 @@ document.getElementById('form-comprovante').addEventListener('submit', async (e)
     finally { btn.innerText = "CONCLUIR INSCRIÇÃO"; btn.disabled = false; }
 });
 
-// Renderização Cliente
+// MODIFICADO COM EXCLUSIVIDADE: RENDERIZAÇÃO INTELIGENTE DO GRID COM CARD DE ANÁLISE TEMPORÁRIO
 function ouvirCardsDoCliente(uid) {
-    database.ref(`usuarios/${uid}/jogos_liberados`).on('value', snapshot => {
+    database.ref(`usuarios/${uid}`).on('value', snapshotUsuario => {
         gridCardsCliente.innerHTML = "";
-        const liberados = snapshot.val() || {};
-        Object.keys(liberados).forEach(cardId => {
+        const dadosUser = snapshotUsuario.val() || {};
+        const liberados = dadosUser.jogos_liberados || {};
+        const chavesLiberadas = Object.keys(liberados);
+
+        // Se ele comprou e enviou o comprovante, mas ainda não tem NENHUM card injetado (Primeira Compra)
+        if (dadosUser.status_cadastro === "comprovante_enviado" && chavesLiberadas.length === 0) {
+            const cardAnalise = document.createElement('div');
+            cardAnalise.className = 'game-card';
+            cardAnalise.style.border = "2px dashed #ffaa00";
+            cardAnalise.style.background = "linear-gradient(135deg, #121824 0%, #1f1911 100%)";
+            
+            // Renderiza um card visual com logo gamer de ampulheta indicando progresso
+            cardAnalise.innerHTML = `
+                <div style="width:100%; height:280px; display:flex; align-items:center; justify-content:center; background:rgba(255,170,0,0.03);">
+                    <span style="font-size:5rem; animation: fadeIn 1s infinite alternate;">⏳</span>
+                </div>
+                <h4 style="color:#ffaa00;">Analisando seu Comprovante...</h4>
+            `;
+            
+            cardAnalise.addEventListener('click', () => {
+                alert("🎮 SEU ACESSO ESTÁ SENDO MONTADO!\n\nRecebemos o seu comprovante PIX com sucesso. Nossa equipe está validando o pagamento neste exato momento para injetar o seu Card de jogo aqui no painel.\n\nFique tranquilo, a liberação é rápida!");
+            });
+            gridCardsCliente.appendChild(cardAnalise);
+            return;
+        }
+
+        // Se ele já tiver jogos, renderiza o patrimônio histórico dele normalmente
+        chavesLiberadas.forEach(cardId => {
             database.ref(`cards_disponiveis/${cardId}`).once('value', cardSnap => {
                 const card = cardSnap.val();
                 if (card) {
@@ -419,9 +443,9 @@ function ouvirEPovoarMenuVisualAdmin() {
         containerVisual.innerHTML = ""; const rawJson = snapshot.val() || "";
         if (!rawJson.trim()) return;
         try {
-            const categoriasData = JSON.parse(rawJson);
-            if (Array.isArray(categoriasData)) {
-                categoriasData.forEach(cat => {
+            const @categoriasData = JSON.parse(rawJson);
+            if (Array.isArray(@categoriasData)) {
+                @categoriasData.forEach(cat => {
                     adicionarBlocoCategoriaVisual(cat.categoria, cat.subcategorias, cat.tipo || "menu", cat.url_categoria || "");
                 });
             }
@@ -495,7 +519,7 @@ document.getElementById('btn-salvar-visual-menu').addEventListener('click', asyn
             const linesSub = bloco.querySelectorAll('.linha-subcategoria-visual');
             linesSub.forEach(linha => {
                 const txt = linha.querySelector('.sub-txt').value.trim();
-                const url = linha.querySelector('.sub-url').value.trim();
+                const url = inlineUrl = linha.querySelector('.sub-url').value.trim();
                 if (txt && url) subcategorias.push({ texto: txt, url: url });
                 else if (txt || url) dadosValidos = false;
             });
@@ -598,7 +622,6 @@ function inicializarPainelAdmin() {
 
             const status = users[uid].status_cadastro || 'pendente_pagamento';
 
-            // FILTRAGEM REVOLUCIONÁRIA DAS 3 ABAS INDEPENDENTES
             if (filtroAdminAtual === "pendentes" && status === "pago") return;
             if (filtroAdminAtual === "pendentes" && status === "cliente_cadastrado") return;
             
@@ -655,7 +678,6 @@ function inicializarPainelAdmin() {
                     <button class="btn-sair" onclick="excluirSolicitacaoEComprovante('${uid}')" style="width:100%; font-size:0.8rem; padding:6px; margin-top:10px; background:#2d1313; border:1px solid #ff3333; color:#ff3333;">📦 Mover Manualmente para Cadastrados (Recuar)</button>
                 `;
             } else {
-                // VISÃO EXCLUSIVA DA ABA DE CLIENTES CADASTRADOS HISTÓRICOS
                 userBox.innerHTML = `
                     <div class="user-info">
                         <p><strong>👥 Cliente da Base Comercial:</strong> ${users[uid].nome} ${users[uid].sobrenome}</p>
@@ -726,7 +748,6 @@ async function removerAcessoJogo(uid, gameId) {
     }
 }
 
-// Recuo manual para clientes cadastrados
 async function excluirSolicitacaoEComprovante(uid) {
     if (confirm("Deseja arquivar e mover este cliente para a aba de 'Clientes Cadastrados'?\n\nIsso limpará o comprovante atual permitindo que ele faça novas compras futuramente, mantendo o login e os jogos dele intactos.")) {
         try {
@@ -743,45 +764,33 @@ async function deletarUsuarioDoBancoTotal(uid, email) {
     }
 }
 
-// ==========================================================================
-// NOVO: SISTEMA DE RESET EM LOTE PARA ARQUIVAMENTO HISTÓRICO DE TEMPORADA
-// ==========================================================================
 document.getElementById('btn-reset-geral-temporada').addEventListener('click', async () => {
     const conf1 = confirm("⚠️ ATENÇÃO - FIM DA PRÉ-VENDA:\n\nVocê vai fechar as vendas da temporada atual.\n\nTodos os jogadores Aprovados serão movidos com segurança para a aba 'Clientes Cadastrados'.\nO login deles continuará funcionando e eles NÃO perderão os jogos atuais, mas o Hub deles voltará a pedir o comprovante assim que você lançar um novo Card!\n\nDeseja continuar?");
-    
     if (conf1) {
         try {
             const btnReset = document.getElementById('btn-reset-geral-temporada');
             btnReset.innerText = "ARQUIVANDO TEMPORADA..."; btnReset.disabled = true;
-
             const snapshot = await database.ref('usuarios').once('value');
             const usuarios = snapshot.val();
-
             if (usuarios) {
                 const loteMudancas = {};
                 Object.keys(usuarios).forEach(uid => {
-                    // Move apenas quem está como 'pago' (aprovado na temporada), deixando os demais intactos
                     if (usuarios[uid].email !== "admin@admin.com" && usuarios[uid].status_cadastro === "pago") {
                         loteMudancas[`usuarios/${uid}/status_cadastro`] = "cliente_cadastrado";
-                        loteMudancas[`usuarios/${uid}/comprovante_base64`] = ""; // Limpa a string pesada da imagem
+                        loteMudancas[`usuarios/${uid}/comprovante_base64`] = ""; 
                     }
                 });
-                
                 await database.ref().update(loteMudancas);
-                alert("🗂️ Temporada encerrada e arquivada com sucesso!\n\nSeu painel de Aprovados está zerado e pronto para a próxima pré-venda. Todos os clientes antigos estão guardados na aba 'Cadastrados'!");
-            } else {
-                alert("Nenhum usuário encontrado.");
+                alert("🗂️ Temporada encerrada e arquivada com sucesso!");
             }
-        } catch (error) {
-            alert("Erro no reset geral: " + error.message);
-        } finally {
+        } catch (error) { alert("Erro no reset geral: " + error.message); }
+        finally {
             const btnReset = document.getElementById('btn-reset-geral-temporada');
             btnReset.innerText = "📦 ARQUIVAR APROVADOS DA TEMPORADA"; btnReset.disabled = false;
         }
     }
 });
 
-// Trava contra clique direito em elementos sensíveis
 document.addEventListener('contextmenu', (e) => {
     if (document.getElementById('view-cliente').classList.contains('active')) {
         const target = e.target.closest('.game-card, .modal-content, img, #container-senha-protegida-modal');
