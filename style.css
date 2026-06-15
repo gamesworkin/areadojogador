@@ -836,3 +836,100 @@ input:focus, textarea:focus, select:focus {
         right: 5px !important;
     }
 } 
+/* ==========================================================================
+   ADICIONADO: REGRAS DE VITRINE DINÂMICA E ALINHAMENTO RESPONSIVO DE CARDS
+   ========================================================================== */
+
+/* Garante o alinhamento correto dos elementos internos de cards de venda */
+.grid-cards .game-card {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    height: 100%;
+}
+
+/* Ajuste do Grid para Mosaico de 3 Cards por linha no Celular */
+@media (max-width: 600px) {
+    .grid-cards {
+        grid-template-columns: repeat(3, 1fr) !important;
+        gap: 8px !important;
+        padding: 5px !important;
+    }
+
+    .grid-cards .game-card h4 {
+        font-size: 0.7rem !important;
+        padding: 6px 4px !important;
+        white-space: normal !important;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        line-height: 1.2;
+    }
+
+    .grid-cards .game-card img {
+        height: 130px !important;
+        object-fit: cover;
+    }
+
+    /* Ajuste do badge de preço flutuante nos cards da loja no celular */
+    .grid-cards .game-card div[style*="position:absolute"] {
+        font-size: 0.55rem !important;
+        padding: 2px 4px !important;
+        top: 5px !important;
+        right: 5px !important;
+    }
+
+    /* CORREÇÃO CRUCIAL PARA PREVIEW/MODAL EM CELULAR (FOTO 1000377257.jpg) */
+    .modal-jogos .modal-content {
+        max-height: 85vh !important; /* Limita a altura total para nunca vazar a tela */
+        display: flex !important;
+        flex-direction: column !important;
+        overflow-y: auto !important; /* Permite rolar a modal inteira se necessário */
+    }
+
+    .modal-jogos .modal-content > div[style*="display:flex"] {
+        flex-direction: column !important;
+    }
+
+    /* Reduz o bloco de exibição da capa para dar prioridade aos botões */
+    .modal-jogos [style*="flex:1 1 280px"] {
+        flex: none !important;
+        padding: 8px !important;
+        background: #0b0e14 !important;
+    }
+
+    .modal-jogos #modal-jogo-capa {
+        max-height: 180px !important; /* Encolhe proporcionalmente na preview mobile */
+        width: auto !important;
+        margin: 0 auto !important;
+    }
+
+    /* Ajusta os espaçamentos internos das informações de compra */
+    .modal-jogos .modal-info {
+        padding: 15px !important;
+        flex: none !important;
+    }
+
+    .modal-jogos #modal-jogo-titulo {
+        font-size: 1.2rem !important;
+        margin-bottom: 8px !important;
+        padding-bottom: 6px !important;
+        text-align: center !important;
+    }
+
+    .modal-jogos #modal-jogo-descricao {
+        font-size: 0.8rem !important;
+        max-height: 90px !important; /* Limita o tamanho do texto longo */
+        overflow-y: auto !important;
+        margin-bottom: 12px !important;
+    }
+
+    .modal-jogos #container-senha-protegida-modal,
+    .modal-jogos #bloco-pix-dinamico-preview {
+        margin-bottom: 10px !important;
+        padding: 10px !important;
+    }
+}
