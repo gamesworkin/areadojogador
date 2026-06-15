@@ -20,26 +20,45 @@ const GOOGLE_WEB_APP_URL = "COLE_AQUI_O_LINK_DO_APP_DA_WEB_DO_GOOGLE";
 // Elementos HTML
 const viewAuth = document.getElementById('view-auth');
 const viewCliente = document.getElementById('view-cliente');
+const viewClienteBloqueado = document.getElementById('view-cliente-bloqueado');
 const viewAdmin = document.getElementById('view-admin');
 const modalFormEnvio = document.getElementById('modal-formulario-envio');
 const modalDetalhesJogo = document.getElementById('modal-detalhes-jogo');
+const modalEditarPerfil = document.getElementById('modal-editar-perfil');
 const gridCardsCliente = document.getElementById('grid-cards-cliente');
 const listaUsuariosAdmin = document.getElementById('lista-usuarios-admin');
 const listaCardsCriados = document.getElementById('lista-cards-criados');
 const inputWhatsApp = document.getElementById('cad-whatsapp');
+const perfWhatsApp = document.getElementById('perf-whatsapp');
 
 let usuarioLogadoUid = null;
 let dadosClienteAtual = {};
-let filtroAdminAtual = "pendentes"; // Filtros possíveis: pendentes, concluidos, cadastrados
+let filtroAdminAtual = "pendentes"; // Filtros possíveis: pendentes, concluuidos, cadastrados
 
-// Máscara WhatsApp
-inputWhatsApp.addEventListener('input', (e) => {
-    let value = e.target.value.replace(/\D/g, "");
+// Máscaras Dinâmicas para WhatsApp (Cadastro e Perfil)
+function aplicarMascaraWhats(elemento) {
+    let value = elemento.value.replace(/\D/g, "");
     if (value.length > 11) value = value.slice(0, 11);
     if (value.length > 6) { value = `(${value.slice(0, 2)}) ${value.slice(2, 7)}-${value.slice(7)}`; }
     else if (value.length > 2) { value = `(${value.slice(0, 2)}) ${value.slice(2)}`; }
     else if (value.length > 0) { value = `(${value}`; }
-    e.target.value = value;
+    elemento.value = value;
+}
+inputWhatsApp.addEventListener('input', (e) => aplicarMascaraWhats(e.target));
+perfWhatsApp.addEventListener('input', (e) => aplicarMascaraWhats(e.target));
+
+// Criptografia Simples Visual de Senha em Tela
+const loginShadowPass = document.getElementById('login-shadow-pass');
+const loginSenhaReal = document.getElementById('login-senha');
+loginShadowPass.addEventListener('input', (e) => {
+    const val = e.target.value;
+    if (val.length < loginSenhaReal.value.length) {
+        loginSenhaReal.value = loginSenhaReal.value.slice(0, val.length);
+    } else if (val.length > loginSenhaReal.value.length) {
+        const charAdicionado = val.slice(-1);
+        if (charAdicionado !== "•") loginSenhaReal.value += charAdicionado;
+    }
+    loginShadowPass.value = "•".repeat(loginSenhaReal.value.length);
 });
 
 function validarProvedorEmail(email) {
@@ -53,6 +72,7 @@ function validarProvedorEmail(email) {
 function irParaTela(tela) {
     viewAuth.classList.remove('active');
     viewCliente.classList.remove('active');
+    viewClienteBloqueado.classList.remove('active');
     viewAdmin.classList.remove('active');
     tela.classList.add('active');
 }
@@ -68,7 +88,7 @@ document.getElementById('tab-cadastro').addEventListener('click', () => {
     document.getElementById('form-cadastro-auth').classList.add('active');
     document.getElementById('form-login').classList.remove('active');
     document.getElementById('tab-cadastro').classList.add('active');
-    document.getElementById('tab-login').classList.add('active');
+    document.getElementById('tab-login').classList.remove('active');
 });
 
 // Configuração das 3 Abas do Admin
@@ -98,7 +118,7 @@ document.getElementById('tab-solic-cadastrados').addEventListener('click', () =>
 });
 
 // ==========================================================================
-// MONITOR DE SESSÃO COM INTELIGÊNCIA DE CENTRAL DE COMPRAS ADAPTADA
+// MONITOR DE SESSÃO COM SEGURANÇA ADAPTADA E GERENCIADOR DE EXCLUSÃO
 // ==========================================================================
 auth.onAuthStateChanged(user => {
     if (user) {
@@ -113,6 +133,13 @@ auth.onAuthStateChanged(user => {
                 const dados = snapshot.val();
                 if (dados) {
                     dadosClienteAtual = dados;
+
+                    // Se a conta está marcada com pedido de exclusão, bloqueia a dashboard
+                    if (dados.status_cadastro === "solicitou_exclusao") {
+                        irParaTela(viewClienteBloqueado);
+                        return;
+                    }
+
                     document.getElementById('user-display-name').innerText = `${dados.nome} ${dados.sobrenome}`;
                     
                     const temCardDisponivelParaComprar = await verificarSeTemCardNaoAdquirido(dados.jogos_liberados || {});
@@ -161,10 +188,7 @@ function verificarSeTemCardNaoAdquirido(jogosLiberadosUsuario) {
     return new Promise((resolve) => {
         database.ref('cards_disponiveis').once('value', snapshot => {
             const cardsGlobais = snapshot.val();
-            if (!cardsGlobais) {
-                resolve(false);
-                return;
-            }
+            if (!cardsGlobais) { resolve(false); return; }
             const idsGlobais = Object.keys(cardsGlobais);
             const temNovidade = idsGlobais.some(id => !jogosLiberadosUsuario[id]);
             resolve(temNovidade);
@@ -180,15 +204,13 @@ function executarCopiaGamerBlindada(textoParaCopiar, elementoBotao) {
         navigator.clipboard.writeText(textoParaCopiar).then(() => {
             elementoBotao.innerText = "✅ Copiado";
             setTimeout(() => { elementoBotao.innerText = textoOriginal; }, 2000);
-        }).catch(err => {
-            executarMetodoCopiaAntigo(textoParaCopiar, elementoBotao, textoOriginal);
-        });
+        }).catch(() => executarMetodoCopiaAntigo(textoParaCopiar, elementoBotao, textoOriginal));
     } else {
         executarMetodoCopiaAntigo(textoParaCopiar, elementoBotao, textoOriginal);
     }
 }
 
-function ejecutarMetodoCopiaAntigo(texto, botao, textoOrig) {
+function executarMetodoCopiaAntigo(texto, botao, textoOrig) {
     const textarea = document.createElement("textarea");
     textarea.value = texto;
     textarea.style.position = "fixed"; textarea.style.opacity = "0";
@@ -208,6 +230,46 @@ function configurarCopiaPixPainel() {
         };
     }
 }
+
+// ==========================================================================
+// CONTROLE DO MENU EDITAR PERFIL DO CLIENTE + EXCLUSÃO
+// ==========================================================================
+document.getElementById('btn-abrir-perfil').addEventListener('click', () => {
+    document.getElementById('perf-email').value = dadosClienteAtual.email;
+    document.getElementById('perf-nome').value = dadosClienteAtual.nome;
+    document.getElementById('perf-sobrenome').value = dadosClienteAtual.sobrenome;
+    document.getElementById('perf-whatsapp').value = dadosClienteAtual.whatsapp || "";
+    aplicarMascaraWhats(document.getElementById('perf-whatsapp'));
+    modalEditarPerfil.classList.add('active');
+});
+
+document.getElementById('btn-fechar-perfil').addEventListener('click', () => modalEditarPerfil.classList.remove('active'));
+
+document.getElementById('form-editar-perfil-cliente').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const nome = document.getElementById('perf-nome').value.trim();
+    const sobrenome = document.getElementById('perf-sobrenome').value.trim();
+    const whatsapp = perfWhatsApp.value.replace(/\D/g, "");
+    
+    try {
+        await database.ref(`usuarios/${usuarioLogadoUid}/nome`).set(nome);
+        await database.ref(`usuarios/${usuarioLogadoUid}/sobrenome`).set(sobrenome);
+        await database.ref(`usuarios/${usuarioLogadoUid}/whatsapp`).set(whatsapp);
+        alert("🚀 Perfil atualizado com sucesso!");
+        modalEditarPerfil.classList.remove('active');
+    } catch(err) { alert("Erro ao atualizar: " + err.message); }
+});
+
+document.getElementById('btn-solicitar-exclusao-conta').addEventListener('click', async () => {
+    const conf = confirm("🚨 ATENÇÃO - DESTRUIÇÃO DE CONTA:\n\nTem certeza absoluta de que deseja solicitar a exclusão total da sua conta e da sua biblioteca de patches adquiridos?\n\nEsta ação NÃO pode ser desfeita e seu acesso será bloqueado imediatamente.");
+    if (conf) {
+        try {
+            await database.ref(`usuarios/${usuarioLogadoUid}/status_cadastro`).set("solicitou_exclusao");
+            alert("Pedido de exclusão enviado! Seu acesso foi suspenso.");
+            modalEditarPerfil.classList.remove('active');
+        } catch(err) { alert("Erro: " + err.message); }
+    }
+});
 
 // ==========================================================================
 // AUTENTICAÇÃO: CADASTRO, LOGIN E RECUPERAÇÃO DE SENHA
@@ -236,7 +298,7 @@ document.getElementById('form-cadastro-auth').addEventListener('submit', async (
 document.getElementById('form-login').addEventListener('submit', async (e) => {
     e.preventDefault();
     const email = document.getElementById('login-email').value.trim();
-    const senha = document.getElementById('login-senha').value;
+    const senha = loginSenhaReal.value;
     const btnLogar = document.getElementById('btn-logar');
     btnLogar.innerText = "LOGANDO... AGUARDE"; btnLogar.disabled = true;
     try { 
@@ -258,7 +320,7 @@ document.getElementById('btn-esqueci-senha').addEventListener('click', async () 
 
 // Envio de Comprovante
 document.getElementById('btn-abrir-formulario').addEventListener('click', () => modalFormEnvio.classList.add('active'));
-document.getElementById('btn-fechar-form').addEventListener('click', () => modalFormEnvio.remove('active'));
+document.getElementById('btn-fechar-form').addEventListener('click', () => modalFormEnvio.classList.remove('active'));
 
 const inputComprovante = document.getElementById('comprovante');
 const dropZone = document.getElementById('drop-zone');
@@ -296,7 +358,6 @@ document.getElementById('form-comprovante').addEventListener('submit', async (e)
     finally { btn.innerText = "CONCLUIR INSCRIÇÃO"; btn.disabled = false; }
 });
 
-// MODIFICADO COM EXCLUSIVIDADE: RENDERIZAÇÃO INTELIGENTE DO GRID COM CARD DE ANÁLISE TEMPORÁRIO
 function ouvirCardsDoCliente(uid) {
     database.ref(`usuarios/${uid}`).on('value', snapshotUsuario => {
         gridCardsCliente.innerHTML = "";
@@ -304,29 +365,24 @@ function ouvirCardsDoCliente(uid) {
         const liberados = dadosUser.jogos_liberados || {};
         const chavesLiberadas = Object.keys(liberados);
 
-        // Se ele comprou e enviou o comprovante, mas ainda não tem NENHUM card injetado (Primeira Compra)
         if (dadosUser.status_cadastro === "comprovante_enviado" && chavesLiberadas.length === 0) {
             const cardAnalise = document.createElement('div');
             cardAnalise.className = 'game-card';
             cardAnalise.style.border = "2px dashed #ffaa00";
             cardAnalise.style.background = "linear-gradient(135deg, #121824 0%, #1f1911 100%)";
-            
-            // Renderiza um card visual com logo gamer de ampulheta indicando progresso
             cardAnalise.innerHTML = `
                 <div style="width:100%; height:280px; display:flex; align-items:center; justify-content:center; background:rgba(255,170,0,0.03);">
                     <span style="font-size:5rem; animation: fadeIn 1s infinite alternate;">⏳</span>
                 </div>
                 <h4 style="color:#ffaa00;">Analisando seu Comprovante...</h4>
             `;
-            
             cardAnalise.addEventListener('click', () => {
-                alert("🎮 SEU ACESSO ESTÁ SENDO MONTADO!\n\nRecebemos o seu comprovante PIX com sucesso. Nossa equipe está validando o pagamento neste exato momento para injetar o seu Card de jogo aqui no painel.\n\nFique tranquilo, a liberação é rápida!");
+                alert("🎮 SEU ACESSO ESTÁ SE SULCANDO!\n\nRecebemos o seu comprovante PIX com sucesso. Nossa equipe está validando o pagamento neste exato momento para injetar o seu Card de jogo aqui no painel.\n\nFique tranquilo, a liberação é rápida!");
             });
             gridCardsCliente.appendChild(cardAnalise);
             return;
         }
 
-        // Se ele já tiver jogos, renderiza o patrimônio histórico dele normalmente
         chavesLiberadas.forEach(cardId => {
             database.ref(`cards_disponiveis/${cardId}`).once('value', cardSnap => {
                 const card = cardSnap.val();
@@ -435,7 +491,7 @@ function inicializarBotaoWhatsApp() {
 }
 
 // ==========================================================================
-// CONSTRUTOR VISUAL DE MENU
+// CONSTRUTOR VISUAL DE MENU (ADMIN)
 // ==========================================================================
 function ouvirEPovoarMenuVisualAdmin() {
     const containerVisual = document.getElementById('construtor-menu-visual-container');
@@ -443,9 +499,9 @@ function ouvirEPovoarMenuVisualAdmin() {
         containerVisual.innerHTML = ""; const rawJson = snapshot.val() || "";
         if (!rawJson.trim()) return;
         try {
-            const @categoriasData = JSON.parse(rawJson);
-            if (Array.isArray(@categoriasData)) {
-                @categoriasData.forEach(cat => {
+            const categoriasData = JSON.parse(rawJson);
+            if (Array.isArray(categoriasData)) {
+                categoriasData.forEach(cat => {
                     adicionarBlocoCategoriaVisual(cat.categoria, cat.subcategorias, cat.tipo || "menu", cat.url_categoria || "");
                 });
             }
@@ -518,8 +574,8 @@ document.getElementById('btn-salvar-visual-menu').addEventListener('click', asyn
         else {
             const linesSub = bloco.querySelectorAll('.linha-subcategoria-visual');
             linesSub.forEach(linha => {
-                const txt = linha.querySelector('.sub-txt').value.trim();
-                const url = inlineUrl = linha.querySelector('.sub-url').value.trim();
+                const txt = inlineTxt = linha.querySelector('.sub-txt').value.trim();
+                const url = linha.querySelector('.sub-url').value.trim();
                 if (txt && url) subcategorias.push({ texto: txt, url: url });
                 else if (txt || url) dadosValidos = false;
             });
@@ -546,7 +602,7 @@ document.getElementById('form-criar-card').addEventListener('submit', async (e) 
     }
     const dadosCard = { titulo: document.getElementById('card-titulo').value.trim(), capa_url: document.getElementById('card-capa').value.trim(), descricao: document.getElementById('card-descricao').value.trim(), senha_patch: document.getElementById('card-senha-patch').value.trim(), botoes: botoes };
     try {
-        if (idEdicao) { await database.ref(`cards_disponiveis/${idEdicao}`).set(dadosCard); alert("🔄 Card atualizado!"); cancelarEdicaoCard(); }
+        if (idEdicao) { await database.ref(`cards_disponiveis/${idEdicao}`).set(dadosCard); alert("🔄 Card updated!"); cancelarEdicaoCard(); }
         else { await database.ref('cards_disponiveis').push(dadosCard); alert("🎯 Novo Card criado!"); document.getElementById('form-criar-card').reset(); }
     } catch (error) { alert("Erro: " + error.message); }
 });
@@ -624,13 +680,20 @@ function inicializarPainelAdmin() {
 
             if (filtroAdminAtual === "pendentes" && status === "pago") return;
             if (filtroAdminAtual === "pendentes" && status === "cliente_cadastrado") return;
+            if (filtroAdminAtual === "pendentes" && status === "solicitou_exclusao") return; // Vai pra aba de cadastrados
             
             if (filtroAdminAtual === "concluidos" && status !== "pago") return;
             
-            if (filtroAdminAtual === "cadastrados" && status !== "cliente_cadastrado") return;
+            // A aba cadastrados herda tanto a base comum quanto os pedidos urgentes de destruição
+            if (filtroAdminAtual === "cadastrados" && status !== "cliente_cadastrado" && status !== "solicitou_exclusao") return;
 
             contagemFiltrados++;
-            const userBox = document.createElement('div'); userBox.className = 'user-item';
+            const userBox = document.createElement('div'); 
+            userBox.className = 'user-item';
+
+            if (status === "solicitou_exclusao") {
+                userBox.classList.add('solicitou-exclusao');
+            }
 
             let listaJogosAtivosHtml = "";
             const jogos = users[uid].jogos_liberados || {};
@@ -678,6 +741,23 @@ function inicializarPainelAdmin() {
                     <button class="btn-sair" onclick="excluirSolicitacaoEComprovante('${uid}')" style="width:100%; font-size:0.8rem; padding:6px; margin-top:10px; background:#2d1313; border:1px solid #ff3333; color:#ff3333;">📦 Mover Manualmente para Cadastrados (Recuar)</button>
                 `;
             } else {
+                // Aba de Cadastrados (Possui inteligência visual de exclusão pendente)
+                let botoesAbaCadastrados = `
+                    <div style="display:flex; gap:5px;">
+                        <select id="select-game-${uid}" style="margin:0; flex:1; height:35px;"><option value="">Injetar Novo Patch Direto</option></select>
+                        <button class="btn-gamer" onclick="injetarCardParaUsuario('${uid}')" style="margin:0; height:35px; width:auto; padding:0 10px;">+</button>
+                    </div>
+                `;
+
+                if (status === "solicitou_exclusao") {
+                    botoesAbaCadastrados = `
+                        <div style="background:#281216; border:1px solid var(--accent-perigo); padding:10px; border-radius:4px; text-align:center;">
+                            <p style="color:var(--accent-perigo); font-weight:bold; font-size:0.85rem; margin-bottom:8px;">⚠️ O USUÁRIO SOLICITOU A EXCLUSÃO DA CONTA</p>
+                            <button class="btn-gamer" style="background:var(--accent-perigo); color:#fff; font-size:0.8rem; padding:8px;" onclick="deletarUsuarioDoBancoTotal('${uid}', '${users[uid].email}')">🚨 APAGAR DADOS DO BANCO TOTAL</button>
+                        </div>
+                    `;
+                }
+
                 userBox.innerHTML = `
                     <div class="user-info">
                         <p><strong>👥 Cliente da Base Comercial:</strong> ${users[uid].nome} ${users[uid].sobrenome}</p>
@@ -688,15 +768,13 @@ function inicializarPainelAdmin() {
                             <ul style="margin:0; padding:0; list-style:none;">${listaJogosAtivosHtml}</ul>
                         </div>
                     </div>
-                    <div style="display:flex; gap:5px;">
-                        <select id="select-game-${uid}" style="margin:0; flex:1; height:35px;"><option value="">Injetar Novo Patch Direto</option></select>
-                        <button class="btn-gamer" onclick="injetarCardParaUsuario('${uid}')" style="margin:0; height:35px; width:auto; padding:0 10px;">+</button>
-                    </div>
+                    ${botoesAbaCadastrados}
                 `;
             }
 
             listaUsuariosAdmin.appendChild(userBox);
-            alimentarSelectComCards(document.getElementById(`select-game-${uid}`), users[uid].jogos_liberados);
+            const selectElement = document.getElementById(`select-game-${uid}`);
+            if (selectElement) alimentarSelectComCards(selectElement, users[uid].jogos_liberados);
         });
 
         if (contagemFiltrados === 0) {
@@ -759,8 +837,11 @@ async function excluirSolicitacaoEComprovante(uid) {
 }
 
 async function deletarUsuarioDoBancoTotal(uid, email) {
-    if (confirm(`🚨 ATENÇÃO:\n\nDeseja deletar DEFINITIVAMENTE os registros do banco?`)) {
-        await database.ref(`usuarios/${uid}`).remove(); alert("Registro deletado.");
+    if (confirm(`🚨 DESTRUIÇÃO DO BANCO DE DADOS:\n\nDeseja apagar DEFINITIVAMENTE os registros comerciais e a lista de jogos do e-mail: ${email}?\n\nApós clicar em OK, limpe manualmente o login dele no Authentication do Console do Firebase.`)) {
+        try {
+            await database.ref(`usuarios/${uid}`).remove();
+            alert("🔥 Dados deletados com sucesso no banco! Lembre-se de deletar o login no Firebase Auth se necessário.");
+        } catch(err) { alert("Erro: " + err.message); }
     }
 }
 
