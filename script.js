@@ -137,6 +137,7 @@ auth.onAuthStateChanged(user => {
                     ouvirCardsDoCliente(user.uid);
                     ouvirEConstruirMenuCliente(); 
                     inicializarBotaoWhatsApp();
+                    configurarCopiaPixPainel(); // Ativa a função de cópia inteligente da chave PIX
                 }
             });
         }
@@ -162,6 +163,21 @@ function verificarSeTemCardNaoAdquirido(jogosLiberadosUsuario) {
 }
 
 function deslogar() { auth.signOut().then(() => location.reload()); }
+
+// ADIÇÃO CIRÚRGICA: FUNÇÃO DE CÓPIA DA CHAVE PIX NO PAINEL DO CLIENTE
+function configurarCopiaPixPainel() {
+    const btnCopiarPix = document.getElementById('btn-copiar-pix-painel');
+    if (btnCopiarPix) {
+        btnCopiarPix.addEventListener('click', () => {
+            const chaveTexto = document.getElementById('valor-chave-pix').innerText;
+            navigator.clipboard.writeText(chaveTexto).then(() => {
+                const textoOriginal = btnCopiarPix.innerText;
+                btnCopiarPix.innerText = "✅ Copiado";
+                setTimeout(() => { btnCopiarPix.innerText = textoOriginal; }, 2000);
+            });
+        });
+    }
+}
 
 // ==========================================================================
 // AUTENTICAÇÃO: CADASTRO, LOGIN ("LOGANDO...") E RECUPERAÇÃO DE SENHA
@@ -225,7 +241,7 @@ document.getElementById('btn-esqueci-senha').addEventListener('click', async () 
 
 // Envio de Comprovante
 document.getElementById('btn-abrir-formulario').addEventListener('click', () => modalFormEnvio.classList.add('active'));
-document.getElementById('btn-fechar-form').addEventListener('click', () => modalFormEnvio.classList.remove('active'));
+document.getElementById('btn-fechar-form').addEventListener('click', () => modalFormEnvio.remove('active'));
 
 const inputComprovante = document.getElementById('comprovante');
 const dropZone = document.getElementById('drop-zone');
@@ -292,6 +308,7 @@ function ouvirCardsDoCliente(uid) {
     });
 }
 
+// ADIÇÃO CIRÚRGICA: INTEGRAÇÃO DA EXIBIÇÃO DE SENHAS DINÂMICAS DENTRO DO MODAL DO CARD
 function abrirModalJogo(card) {
     const imgCapa = document.getElementById('modal-jogo-capa');
     imgCapa.src = card.capa_url;
@@ -299,6 +316,39 @@ function abrirModalJogo(card) {
     document.getElementById('modal-jogo-descricao').innerText = card.descricao;
     
     imgCapa.addEventListener('dragstart', (e) => e.preventDefault());
+
+    // Configuração do Sistema Secreto de Senhas do Card
+    const containerSenha = document.getElementById('container-senha-protegida-modal');
+    const btnRevelarSenha = document.getElementById('btn-revelar-senha-modal');
+    const areaTextoSenha = document.getElementById('area-block-texto-senha') || document.getElementById('area-texto-senha-secreta');
+    const textoSenhaReal = document.getElementById('texto-senha-secreta-real');
+    const btnCopiarSenha = document.getElementById('btn-copiar-senha-modal');
+
+    // Reseta o estado visual do painel de senhas interno para segurança
+    btnRevelarSenha.style.display = "block";
+    areaTextoSenha.style.display = "none";
+
+    if (card.senha_patch && card.senha_patch.trim() !== "") {
+        textoSenhaReal.innerText = card.senha_patch.trim();
+        containerSenha.style.display = "block";
+        
+        // Ação de clique para revelar a senha com efeito
+        btnRevelarSenha.onclick = () => {
+            btnRevelarSenha.style.display = "none";
+            areaTextoSenha.style.display = "block";
+        };
+
+        // Ação de clique para copiar a chave de extração
+        btnCopiarSenha.onclick = () => {
+            navigator.clipboard.writeText(textoSenhaReal.innerText).then(() => {
+                const textoOriginal = btnCopiarSenha.innerText;
+                btnCopiarSenha.innerText = "✅ Senha Copiada!";
+                setTimeout(() => { btnCopiarSenha.innerText = textoOriginal; }, 2000);
+            });
+        };
+    } else {
+        containerSenha.style.display = "none";
+    }
 
     const container = document.getElementById('modal-jogo-botoes');
     container.innerHTML = "";
@@ -391,11 +441,6 @@ function ouvirEConstruirMenuCliente() {
     });
 }
 
-function inicializarBotaoWhatsApp() {
-    const whatsappNumero = "5588988470190"; 
-    document.getElementById('btn-whatsapp-flutuante').href = `https://api.whatsapp.com/send?phone=${whatsappNumero}&text=Ol%C3%A1,%20preciso%20de%20ajuda%20no%20Hub!`;
-}
-
 // ==========================================================================
 // CONSTRUTOR VISUAL DE MENU COM EXCLUSÃO DE CATEGORIAS E SUBCATEGORIAS
 // ==========================================================================
@@ -432,16 +477,15 @@ function adicionarBlocoCategoriaVisual(nomeCategoria = "", subcategoriasArr = []
     divBloco.innerHTML = `
         <div style="display: flex; gap: 10px; margin-bottom: 5px; align-items:center;">
             <input type="text" class="input-nome-categoria" placeholder="Título da Categoria (Ex: 🎁 Conteúdos Bônus)" value="${nomeCategoria}" style="margin-bottom:0; font-weight:bold; border-color:#ffaa00;">
-            <!-- EXCLUSÃO DA CATEGORIA COMPLETA -->
             <button type="button" onclick="removerBlocoCategoriaVisual('${blocoId}')" class="btn-sair" style="margin-top:0; padding:6px 12px; height:38px;" title="Excluir Categoria">Deletar</button>
         </div>
         
         <div class="radio-tipo-container">
             <label>
-                <input type="radio" name="tipo-${blocoId}" value="menu" ${tipoCategoria === "menu" ? "checked" : ""} onclick="alternarTipoCategoriaVisual('${blocoId}', 'menu')"> 📁 Menu Retrátil (Com Subcategorias)
+                <input type="radio" name="tipo-${blocoId}" value="menu" ${tipoCategoria === "menu" ? "checked" : ""} onclick="alternarTipoCategoriaVisual('${blocoId}')"> 📁 Menu Retrátil (Com Subcategorias)
             </label>
             <label>
-                <input type="radio" name="tipo-${blocoId}" value="link" ${tipoCategoria === "link" ? "checked" : ""} onclick="alternarTipoCategoriaVisual('${blocoId}', 'link')"> 🔗 Link Direto
+                <input type="radio" name="tipo-${blocoId}" value="link" ${tipoCategoria === "link" ? "checked" : ""} onclick="alternarTipoCategoriaVisual('${blocoId}')"> 🔗 Link Direto
             </label>
         </div>
 
@@ -451,8 +495,7 @@ function adicionarBlocoCategoriaVisual(nomeCategoria = "", subcategoriasArr = []
 
         <div class="wrapper-subcategorias-area" style="display: ${tipoCategoria === "menu" ? "block" : "none"};">
             <div class="container-subcategorias-rows" style="padding-left: 15px; border-left: 2px dashed #242f41;">
-                <!-- Linhas de subcategorias entrarão aqui -->
-            </div>
+                </div>
             <button type="button" onclick="adicionarLinhaSubcategoriaVisual('${blocoId}')" class="btn-link" style="color:#00ff66; margin-top: 5px; font-size: 0.8rem; text-align: left; display:block;">+ Adicionar Link/Subcategoria</button>
         </div>
     `;
@@ -493,7 +536,6 @@ function adicionarLinhaSubcategoriaVisual(blocoId, txtLink = "", urlLink = "") {
     divRow.innerHTML = `
         <input type="text" class="sub-txt" placeholder="Texto do Link" value="${txtLink}" style="flex: 1;">
         <input type="url" class="sub-url" placeholder="URL Destino (https://...)" value="${urlLink}" style="flex: 1.5;">
-        <!-- EXCLUSÃO INDIVIDUAL DE SUBCATEGORIA (LINK) -->
         <button type="button" onclick="document.getElementById('${rowId}').remove()" class="btn-sair" style="background:#421414; color:#ff3333; margin-top:0; border:1px solid #ff3333; height:38px; padding:0 10px;" title="Remover este link">Excluir</button>
     `;
 
@@ -506,7 +548,6 @@ function removerBlocoCategoriaVisual(blocoId) {
     }
 }
 
-// Intercepta o clique de salvar e envia a nova estrutura limpa ao Firebase
 document.getElementById('btn-salvar-visual-menu').addEventListener('click', async () => {
     const blocos = document.querySelectorAll('.bloco-categoria-visual');
     const estruturaMenuFinal = [];
@@ -525,8 +566,8 @@ document.getElementById('btn-salvar-visual-menu').addEventListener('click', asyn
                 dadosValidos = false;
             }
         } else {
-            const linhasSub = bloco.querySelectorAll('.linha-subcategoria-visual');
-            linhasSub.forEach(linha => {
+            const linesSub = bloco.querySelectorAll('.linha-subcategoria-visual');
+            linesSub.forEach(linha => {
                 const txt = linha.querySelector('.sub-txt').value.trim();
                 const url = linha.querySelector('.sub-url').value.trim();
 
@@ -561,7 +602,7 @@ document.getElementById('btn-salvar-visual-menu').addEventListener('click', asyn
 });
 
 // ==========================================================================
-// CONTROLE DE CARDS DE JOGOS (ADMIN)
+// CONTROLE DE CARDS DE JOGOS (ADMIN - COM 5º CAMPO DE SENHA INJETADO)
 // ==========================================================================
 document.getElementById('form-criar-card').addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -578,6 +619,7 @@ document.getElementById('form-criar-card').addEventListener('submit', async (e) 
         titulo: document.getElementById('card-titulo').value.trim(),
         capa_url: document.getElementById('card-capa').value.trim(),
         descricao: document.getElementById('card-descricao').value.trim(),
+        senha_patch: document.getElementById('card-senha-patch').value.trim(), // Salvamento do 5º Campo de Senhas
         botoes: botoes
     };
 
@@ -611,7 +653,7 @@ function ouvirCardsGlobaisAdmin() {
                     <img src="${cards[id].capa_url}" style="width:40px; height:50px; object-fit:cover; border-radius:4px;">
                     <div>
                         <p style="margin:0; font-weight:bold; color:#fff;">${cards[id].titulo}</p>
-                        <p style="margin:0; font-size:0.75rem; color:#aaa;">${cards[id].botoes ? cards[id].botoes.length : 0} Versões/Links</p>
+                        <p style="margin:0; font-size:0.75rem; color:#aaa;">${cards[id].botoes ? cards[id].botoes.length : 0} Versões/Links ${cards[id].senha_patch ? ' | 🔑 Protegido' : ''}</p>
                     </div>
                 </div>
                 <div style="display:flex; gap:5px; margin-top:10px;">
@@ -632,6 +674,7 @@ function carregarCardParaEdicao(id) {
         document.getElementById('card-titulo').value = card.titulo;
         document.getElementById('card-capa').value = card.capa_url;
         document.getElementById('card-descricao').value = card.descricao;
+        document.getElementById('card-senha-patch').value = card.senha_patch || ""; // Resgata a senha na edição
         
         for(let i=1; i<=4; i++) {
             document.getElementById(`btn-txt-${i}`).value = "";
@@ -881,7 +924,7 @@ document.getElementById('btn-reset-geral-temporada').addEventListener('click', a
 // Trava contra clique direito em elementos sensíveis
 document.addEventListener('contextmenu', (e) => {
     if (document.getElementById('view-cliente').classList.contains('active')) {
-        const target = e.target.closest('.game-card, .modal-content, img');
+        const target = e.target.closest('.game-card, .modal-content, img, #container-senha-protegida-modal');
         if (target) {
             e.preventDefault();
             return false;
