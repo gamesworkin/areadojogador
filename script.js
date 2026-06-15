@@ -882,7 +882,7 @@ function exportarCardsParaJSON() {
 }
 
 // Arquivamento e Reset Geral de Pré-vendas da Temporada (Garante a limpeza das tabelas)
-function executarResetGeralTemporadaPreVenda() {
+function ejecutarResetGeralTemporadaPreVenda() {
     if (confirm("🚨 ALERTA CRÍTICO: Deseja realmente ARQUIVAR e limpar todas as inscrições APROVADAS desta temporada? Os clientes perderão o acesso imediato aos downloads liberados para reincorporação de um novo ciclo comercial. Certifique-se de ter feito backup.")) {
         if (confirm("Confirmação final: Deseja prosseguir com a limpeza e arquivamento?")) {
             let chavesParaRemover = [];
