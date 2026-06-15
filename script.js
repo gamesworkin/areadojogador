@@ -40,7 +40,6 @@ function aplicarMascaraWhats(elemento) {
     let value = elemento.value.replace(/\D/g, "");
     if (value.length > 11) value = value.slice(0, 11);
     if (value.length > 6) { value = `(${value.slice(0, 2)}) ${value.slice(2, 7)}-${value.slice(7)}`; }
-    else if (value.length > 2) { value = `(${value.slice(0, 2)}) ${value.slice(2)}`; }
     else if (value.length > 0) { value = `(${value}`; }
     elemento.value = value;
 }
@@ -368,13 +367,13 @@ function ouvirCardsDoCliente(uid) {
         if (dadosUser.status_cadastro === "comprovante_enviado" && chavesLiberadas.length === 0) {
             const cardAnalise = document.createElement('div');
             cardAnalise.className = 'game-card';
-            cardAnalise.style.border = "2px dashed #ffaa00";
-            cardAnalise.style.background = "linear-gradient(135deg, #121824 0%, #1f1911 100%)";
+            cardAnalise.style.border = "2px dashed #00ff66";
+            cardAnalise.style.background = "linear-gradient(135deg, #121824 0%, #111f16 100%)";
             cardAnalise.innerHTML = `
-                <div style="width:100%; height:280px; display:flex; align-items:center; justify-content:center; background:rgba(255,170,0,0.03);">
+                <div style="width:100%; height:280px; display:flex; align-items:center; justify-content:center; background:rgba(0,255,102,0.03);">
                     <span style="font-size:5rem; animation: fadeIn 1s infinite alternate;">⏳</span>
                 </div>
-                <h4 style="color:#ffaa00;">Analisando seu Comprovante...</h4>
+                <h4 style="color:#00ff66;">Analisando seu Comprovante...</h4>
             `;
             cardAnalise.addEventListener('click', () => {
                 alert("🎮 SEU ACESSO ESTÁ SENDO ANALISADO!\n\nRecebemos o seu comprovante PIX com sucesso. Nossa equipe está validando o pagamento neste exato momento para injetar o seu Card de jogo aqui no painel.\n\nFique tranquilo, a liberação é rápida!");
@@ -515,7 +514,7 @@ function adicionarBlocoCategoriaVisual(nomeCategoria = "", subcategoriasArr = []
     const divBloco = document.createElement('div'); divBloco.className = 'bloco-categoria-visual'; divBloco.id = blocoId;
     divBloco.innerHTML = `
         <div style="display: flex; gap: 10px; margin-bottom: 5px; align-items:center;">
-            <input type="text" class="input-nome-categoria" placeholder="Título da Categoria" value="${nomeCategoria}" style="margin-bottom:0; font-weight:bold; border-color:#ffaa00;">
+            <input type="text" class="input-nome-categoria" placeholder="Título da Categoria" value="${nomeCategoria}" style="margin-bottom:0; font-weight:bold; border-color:#00ff66;">
             <button type="button" onclick="removerBlocoCategoriaVisual('${blocoId}')" class="btn-sair" style="margin-top:0; padding:6px 12px; height:38px;">Deletar</button>
         </div>
         <div class="radio-tipo-container">
@@ -574,8 +573,8 @@ document.getElementById('btn-salvar-visual-menu').addEventListener('click', asyn
         else {
             const linesSub = bloco.querySelectorAll('.linha-subcategoria-visual');
             linesSub.forEach(linha => {
-                const txt = inlineTxt = linha.querySelector('.sub-txt').value.trim();
-                const url = linha.querySelector('.sub-url').value.trim();
+                const txt = inlineTxt = inlineTxt = linha.querySelector('.sub-txt').value.trim();
+                const url = inlineTxt = linha.querySelector('.sub-url').value.trim();
                 if (txt && url) subcategorias.push({ texto: txt, url: url });
                 else if (txt || url) dadosValidos = false;
             });
@@ -585,7 +584,7 @@ document.getElementById('btn-salvar-visual-menu').addEventListener('click', asyn
     if (!dadosValidos) { alert("⚠️ Existem campos incompletos no construtor."); return; }
     try {
         await database.ref('configuracao_menu_json').set(estruturaMenuFinal.length > 0 ? JSON.stringify(estruturaMenuFinal, null, 2) : "");
-        alert("🚀 Menu Horizontal atualizado com sucesso!");
+        alert("🚀 Menu Horizontal updated com sucesso!");
     } catch (e) { alert("Erro: " + e.message); }
 });
 
@@ -612,7 +611,7 @@ function ouvirCardsGlobaisAdmin() {
         listaCardsCriados.innerHTML = ""; const cards = snapshot.val();
         if (!cards) { listaCardsCriados.innerHTML = `<p style="color:#aaa; font-size:0.9rem;">Nenhum card.</p>`; return; }
         Object.keys(cards).forEach(id => {
-            const div = document.createElement('div'); div.className = 'user-item'; div.style.borderLeft = "3px solid #ffaa00";
+            const div = document.createElement('div'); div.className = 'user-item'; div.style.borderLeft = "3px solid #00ff66";
             div.innerHTML = `
                 <div style="display:flex; gap:10px; align-items:center;">
                     <img src="${cards[id].capa_url}" style="width:40px; height:50px; object-fit:cover; border-radius:4px;">
@@ -708,14 +707,14 @@ function inicializarPainelAdmin() {
                 const temComp = users[uid].comprovante_base64 && users[uid].comprovante_base64.length > 10;
                 const btnComp = temComp 
                     ? `<button class="btn-visualizar-comprovante" onclick="abrirComprovanteNovaAba('${uid}')">👁️ Ver Comprovante Enviado</button>`
-                    : `<p style="color:#ffaa00; font-size:0.8rem; margin:5px 0;">⏳ Aguardando comprovante PIX...</p>`;
+                    : `<p style="color:#00ff66; font-size:0.8rem; margin:5px 0;">⏳ Aguardando comprovante PIX...</p>`;
 
                 userBox.innerHTML = `
                     <div class="user-info">
                         <p><strong>Jogador:</strong> ${users[uid].nome} ${users[uid].sobrenome}</p>
                         <p><strong>E-mail:</strong> ${users[uid].email}</p>
                         <p><strong>WhatsApp:</strong> ${users[uid].whatsapp || 'Não cadastrado'}</p>
-                        <p><strong>Status Antigo:</strong> <span style="color:#ffaa00">${status.toUpperCase()}</span></p>
+                        <p><strong>Status Antigo:</strong> <span style="color:#00ff66">${status.toUpperCase()}</span></p>
                         ${btnComp}
                     </div>
                     <select id="select-game-${uid}" style="margin-bottom:10px;"><option value="">-- Selecione o Novo Card para Injetar --</option></select>
@@ -740,7 +739,7 @@ function inicializarPainelAdmin() {
                     <button class="btn-sair" onclick="excluirSolicitacaoEComprovante('${uid}')" style="width:100%; font-size:0.8rem; padding:6px; margin-top:10px; background:#2d1313; border:1px solid #ff3333; color:#ff3333;">📦 Mover Manualmente para Cadastrados (Recuar)</button>
                 `;
             } else {
-                // Aba de Cadastrados (Possui inteligência de exclusão pendente em 1 clique)
+                // Aba de Cadastrados (Possui inteligência de exclusão em 1 clique)
                 let botoesAbaCadastrados = `
                     <div style="display:flex; gap:5px;">
                         <select id="select-game-${uid}" style="margin:0; flex:1; height:35px;"><option value="">Injetar Novo Patch Direto</option></select>
@@ -851,7 +850,7 @@ async function deletarUsuarioDoBancoTotal(uid, email) {
 }
 
 document.getElementById('btn-reset-geral-temporada').addEventListener('click', async () => {
-    const conf1 = confirm("⚠️ ATENÇÃO - FIM DA PRÉ-VENDA:\n\nVocê vai fechar as vendas da temporada atual.\n\nTodos os jogadores Aprovados serão movidos com segurança para a aba 'Clientes Cadastrados'.\nO login deles continuará funcionando e eles NÃO perderão os jogos atuais, mas o Hub deles voltará a pedir o comprovante assim que você lançar um novo Card!\n\nDeseja continuar?");
+    const conf1 = confirm("⚠️ ATENÇÃO - FIM DA PRÉ-VENDA:\n\nVocê vai fechar as vendas da temporada atual.\n\nTodos os jogadores Aprovados serão movidos com segurança para a aba 'Clientes Cadastrados'.\nO login deles continuará funcionando e eles NÃO perderão os jogos antigos, mas o Hub deles voltará a pedir o comprovante assim que você lançar um novo Card!\n\nDeseja continuar?");
     if (conf1) {
         try {
             const btnReset = document.getElementById('btn-reset-geral-temporada');
