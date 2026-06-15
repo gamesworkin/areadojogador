@@ -23,6 +23,7 @@ const viewCliente = document.getElementById('view-cliente');
 const viewClienteBloqueado = document.getElementById('view-cliente-bloqueado');
 const viewAdmin = document.getElementById('view-admin');
 const modalFormEnvio = document.getElementById('modal-formulario-envio');
+const modalDetailsContainerGamer = document.getElementById('modal-details-container-gamer');
 const modalDetalhesJogo = document.getElementById('modal-detalhes-jogo');
 const modalEditarPerfil = document.getElementById('modal-editar-perfil');
 const gridCardsCliente = document.getElementById('grid-cards-cliente');
@@ -37,6 +38,7 @@ let filtroAdminAtual = "pendentes";
 
 // Máscaras Dinâmicas para WhatsApp (Cadastro e Perfil)
 function aplicarMascaraWhats(elemento) {
+    if (!elemento) return;
     let value = elemento.value.replace(/\D/g, "");
     if (value.length > 11) value = value.slice(0, 11);
     if (value.length > 6) { value = `(${value.slice(0, 2)}) ${value.slice(2, 7)}-${value.slice(7)}`; }
@@ -44,22 +46,29 @@ function aplicarMascaraWhats(elemento) {
     else if (value.length > 0) { value = `(${value}`; }
     elemento.value = value;
 }
-inputWhatsApp.addEventListener('input', (e) => aplicarMascaraWhats(e.target));
-perfWhatsApp.addEventListener('input', (e) => aplicarMascaraWhats(e.target));
+
+if (inputWhatsApp) {
+    inputWhatsApp.addEventListener('input', (e) => aplicarMascaraWhats(e.target));
+}
+if (perfWhatsApp) {
+    perfWhatsApp.addEventListener('input', (e) => aplicarMascaraWhats(e.target));
+}
 
 // Criptografia Simples Visual de Senha em Tela
 const loginShadowPass = document.getElementById('login-shadow-pass');
 const loginSenhaReal = document.getElementById('login-senha');
-loginShadowPass.addEventListener('input', (e) => {
-    const val = e.target.value;
-    if (val.length < loginSenhaReal.value.length) {
-        loginSenhaReal.value = loginSenhaReal.value.slice(0, val.length);
-    } else if (val.length > loginSenhaReal.value.length) {
-        const charAdicionado = val.slice(-1);
-        if (charAdicionado !== "•") loginSenhaReal.value += charAdicionado;
-    }
-    loginShadowPass.value = "•".repeat(loginSenhaReal.value.length);
-});
+if (loginShadowPass && loginSenhaReal) {
+    loginShadowPass.addEventListener('input', (e) => {
+        const val = e.target.value;
+        if (val.length < loginSenhaReal.value.length) {
+            loginSenhaReal.value = loginSenhaReal.value.slice(0, val.length);
+        } else if (val.length > loginSenhaReal.value.length) {
+            const charAdicionado = val.slice(-1);
+            if (charAdicionado !== "•") loginSenhaReal.value += charAdicionado;
+        }
+        loginShadowPass.value = "•".repeat(loginSenhaReal.value.length);
+    });
+}
 
 function validarProvedorEmail(email) {
     const emailLimpo = email.trim().toLowerCase();
@@ -70,52 +79,62 @@ function validarProvedorEmail(email) {
 }
 
 function irParaTela(tela) {
-    viewAuth.classList.remove('active');
-    viewCliente.classList.remove('active');
-    viewClienteBloqueado.classList.remove('active');
-    viewAdmin.classList.remove('active');
-    tela.classList.add('active');
+    if (viewAuth) viewAuth.classList.remove('active');
+    if (viewCliente) viewCliente.classList.remove('active');
+    if (viewClienteBloqueado) viewClienteBloqueado.classList.remove('active');
+    if (viewAdmin) viewAdmin.classList.remove('active');
+    if (tela) tela.classList.add('active');
 }
 
 // Chaves de Abas Login/Cadastro
-document.getElementById('tab-login').addEventListener('click', () => {
-    document.getElementById('form-login').classList.add('active');
-    document.getElementById('form-cadastro-auth').classList.remove('active');
-    document.getElementById('tab-login').classList.add('active');
-    document.getElementById('tab-cadastro').classList.remove('active');
-});
-document.getElementById('tab-cadastro').addEventListener('click', () => {
-    document.getElementById('form-cadastro-auth').classList.add('active');
-    document.getElementById('form-login').classList.remove('active');
-    document.getElementById('tab-cadastro').classList.add('active');
-    document.getElementById('tab-login').classList.remove('active');
-});
+const tabLogin = document.getElementById('tab-login');
+const tabCadastro = document.getElementById('tab-cadastro');
+if (tabLogin && tabCadastro) {
+    tabLogin.addEventListener('click', () => {
+        document.getElementById('form-login').classList.add('active');
+        document.getElementById('form-cadastro-auth').classList.remove('active');
+        tabLogin.classList.add('active');
+        tabCadastro.classList.remove('active');
+    });
+    tabCadastro.addEventListener('click', () => {
+        document.getElementById('form-cadastro-auth').classList.add('active');
+        document.getElementById('form-login').classList.remove('active');
+        tabCadastro.classList.add('active');
+        tabLogin.classList.remove('active');
+    });
+}
 
 // Configuração das 3 Abas do Admin
-document.getElementById('tab-solic-pendentes').addEventListener('click', () => {
-    filtroAdminAtual = "pendentes";
-    document.getElementById('tab-solic-pendentes').classList.add('active');
-    document.getElementById('tab-solic-concluidos').classList.remove('active');
-    document.getElementById('tab-solic-cadastrados').classList.remove('active');
-    document.getElementById('container-reset-pre-venda').style.display = "none";
-    inicializarPainelAdmin();
-});
-document.getElementById('tab-solic-concluidos').addEventListener('click', () => {
-    filtroAdminAtual = "concluidos";
-    document.getElementById('tab-solic-concluidos').classList.add('active');
-    document.getElementById('tab-solic-pendentes').classList.remove('active');
-    document.getElementById('tab-solic-cadastrados').classList.remove('active');
-    document.getElementById('container-reset-pre-venda').style.display = "block";
-    inicializarPainelAdmin();
-});
-document.getElementById('tab-solic-cadastrados').addEventListener('click', () => {
-    filtroAdminAtual = "cadastrados";
-    document.getElementById('tab-solic-cadastrados').classList.add('active');
-    document.getElementById('tab-solic-pendentes').classList.remove('active');
-    document.getElementById('tab-solic-concluidos').classList.remove('active');
-    document.getElementById('container-reset-pre-venda').style.display = "none";
-    inicializarPainelAdmin();
-});
+const tabSolicPendentes = document.getElementById('tab-solic-pendentes');
+const tabSolicConcluidos = document.getElementById('tab-solic-concluidos');
+const tabSolicCadastrados = document.getElementById('tab-solic-cadastrados');
+
+if (tabSolicPendentes && tabSolicConcluidos && tabSolicCadastrados) {
+    tabSolicPendentes.addEventListener('click', () => {
+        filtroAdminAtual = "pendentes";
+        tabSolicPendentes.classList.add('active');
+        tabSolicConcluidos.classList.remove('active');
+        tabSolicCadastrados.classList.remove('active');
+        document.getElementById('container-reset-pre-venda').style.display = "none";
+        inicializarPainelAdmin();
+    });
+    tabSolicConcluidos.addEventListener('click', () => {
+        filtroAdminAtual = "concluidos";
+        tabSolicConcluidos.classList.add('active');
+        tabSolicPendentes.classList.remove('active');
+        tabSolicCadastrados.classList.remove('active');
+        document.getElementById('container-reset-pre-venda').style.display = "block";
+        inicializarPainelAdmin();
+    });
+    tabSolicCadastrados.addEventListener('click', () => {
+        filtroAdminAtual = "cadastrados";
+        tabSolicCadastrados.classList.add('active');
+        tabSolicPendentes.classList.remove('active');
+        tabSolicConcluidos.classList.remove('active');
+        document.getElementById('container-reset-pre-venda').style.display = "none";
+        inicializarPainelAdmin();
+    });
+}
 
 // ==========================================================================
 // MONITOR DE SESSÃO COM SEGURANÇA ADAPTADA E GERENCIADOR DE EXCLUSÃO
@@ -129,7 +148,7 @@ auth.onAuthStateChanged(user => {
             ouvirCardsGlobaisAdmin();
             ouvirEPovoarMenuVisualAdmin(); 
         } else {
-            database.ref('usuarios/' + user.uid).on('value', async snapshot => {
+            database.ref('usuarios/' + user.uid).on('value', snapshot => {
                 const dados = snapshot.val();
                 if (dados) {
                     dadosClienteAtual = dados;
@@ -139,18 +158,24 @@ auth.onAuthStateChanged(user => {
                         return;
                     }
 
-                    document.getElementById('user-display-name').innerText = `${dados.nome} ${dados.sobrenome}`;
+                    const displayNameElem = document.getElementById('user-display-name');
+                    if (displayNameElem) {
+                        displayNameElem.innerText = `${dados.nome} ${dados.sobrenome}`;
+                    }
                     
                     const areaPendente = document.getElementById('area-compra-pendente');
 
                     if (dados.status_cadastro === "comprovante_enviado") {
-                        areaPendente.style.display = "block";
-                        document.getElementById('caixa-pix-geral-backup').style.display = "none";
+                        if (areaPendente) areaPendente.style.display = "block";
+                        const cPixGeral = document.getElementById('caixa-pix-geral-backup');
+                        if (cPixGeral) cPixGeral.style.display = "none";
                         document.getElementById('texto-alerta-titulo').innerText = "⏳ Comprovante em Análise";
                         document.getElementById('texto-alerta-desc').innerText = "Seu comprovante foi enviado com sucesso. Aguarde a validação do administrador.";
-                        document.getElementById('grid-vitrine-vendas').innerHTML = "";
+                        const gridVitrine = document.getElementById('grid-vitrine-vendas');
+                        if (gridVitrine) gridVitrine.innerHTML = "";
                     } else {
-                        document.getElementById('caixa-pix-geral-backup').style.display = "none";
+                        const cPixGeral = document.getElementById('caixa-pix-geral-backup');
+                        if (cPixGeral) cPixGeral.style.display = "none";
                         povoarVitrineDeVendasCliente(dados.jogos_liberados || {});
                     }
                     
@@ -171,6 +196,7 @@ auth.onAuthStateChanged(user => {
 function povoarVitrineDeVendasCliente(jogosLiberadosUsuario) {
     const areaPendente = document.getElementById('area-compra-pendente');
     const containerVitrine = document.getElementById('grid-vitrine-vendas');
+    if (!containerVitrine || !areaPendente) return;
     
     database.ref('cards_disponiveis').once('value', snapshot => {
         const cardsGlobais = snapshot.val();
@@ -246,101 +272,131 @@ function configurarCopiaPixPainel() {
 // ==========================================================================
 // CONTROLE DO MENU EDITAR PERFIL DO CLIENTE + EXCLUSÃO
 // ==========================================================================
-document.getElementById('btn-abrir-perfil').addEventListener('click', () => {
-    document.getElementById('perf-email').value = dadosClienteAtual.email;
-    document.getElementById('perf-nome').value = dadosClienteAtual.nome;
-    document.getElementById('perf-sobrenome').value = dadosClienteAtual.sobrenome;
-    document.getElementById('perf-whatsapp').value = dadosClienteAtual.whatsapp || "";
-    aplicarMascaraWhats(document.getElementById('perf-whatsapp'));
-    modalEditarPerfil.classList.add('active');
-});
+const btnAbrirPerfil = document.getElementById('btn-abrir-perfil');
+if (btnAbrirPerfil) {
+    btnAbrirPerfil.addEventListener('click', () => {
+        document.getElementById('perf-email').value = dadosClienteAtual.email || "";
+        document.getElementById('perf-nome').value = dadosClienteAtual.nome || "";
+        document.getElementById('perf-sobrenome').value = dadosClienteAtual.sobrenome || "";
+        document.getElementById('perf-whatsapp').value = dadosClienteAtual.whatsapp || "";
+        aplicarMascaraWhats(document.getElementById('perf-whatsapp'));
+        if (modalEditarPerfil) modalEditarPerfil.classList.add('active');
+    });
+}
 
-document.getElementById('btn-fechar-perfil').addEventListener('click', () => modalEditarPerfil.classList.remove('active'));
+const btnFecharPerfil = document.getElementById('btn-fechar-perfil');
+if (btnFecharPerfil) {
+    btnFecharPerfil.addEventListener('click', () => {
+        if (modalEditarPerfil) modalEditarPerfil.classList.remove('active');
+    });
+}
 
-document.getElementById('form-editar-perfil-cliente').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const nome = document.getElementById('perf-nome').value.trim();
-    const sobrenome = document.getElementById('perf-sobrenome').value.trim();
-    const whatsapp = perfWhatsApp.value.replace(/\D/g, "");
-    
-    try {
-        await database.ref(`usuarios/${usuarioLogadoUid}/nome`).set(nome);
-        await database.ref(`usuarios/${usuarioLogadoUid}/sobrenome`).set(sobrenome);
-        await database.ref(`usuarios/${usuarioLogadoUid}/whatsapp`).set(whatsapp);
-        alert("🚀 Perfil atualizado com sucesso!");
-        modalEditarPerfil.classList.remove('active');
-    } catch(err) { alert("Erro ao atualizar: " + err.message); }
-});
-
-document.getElementById('btn-solicitar-exclusao-conta').addEventListener('click', async () => {
-    const conf = confirm("🚨 ATENÇÃO:\n\nTem certeza absoluta de que deseja solicitar a exclusão total da sua conta?\n\nSeu acesso será revogado e os dados limpos pelo administrador.");
-    if (conf) {
+const formEditarPerfil = document.getElementById('form-editar-perfil-cliente');
+if (formEditarPerfil) {
+    formEditarPerfil.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const nome = document.getElementById('perf-nome').value.trim();
+        const sobrenome = document.getElementById('perf-sobrenome').value.trim();
+        const whatsapp = perfWhatsApp.value.replace(/\D/g, "");
+        
         try {
-            await database.ref(`usuarios/${usuarioLogadoUid}/status_cadastro`).set("solicitou_exclusao");
-            alert("Pedido enviado com sucesso!");
-            modalEditarPerfil.classList.remove('active');
-        } catch(err) { alert("Erro: " + err.message); }
-    }
-});
+            await database.ref(`usuarios/${usuarioLogadoUid}/nome`).set(nome);
+            await database.ref(`usuarios/${usuarioLogadoUid}/sobrenome`).set(sobrenome);
+            await database.ref(`usuarios/${usuarioLogadoUid}/whatsapp`).set(whatsapp);
+            alert("🚀 Perfil atualizado com sucesso!");
+            if (modalEditarPerfil) modalEditarPerfil.classList.remove('active');
+        } catch(err) { alert("Erro ao atualizar: " + err.message); }
+    });
+}
+
+const btnSolicitarExclusao = document.getElementById('btn-solicitar-exclusao-conta');
+if (btnSolicitarExclusao) {
+    btnSolicitarExclusao.addEventListener('click', async () => {
+        const conf = confirm("🚨 ATENÇÃO:\n\nTem certeza absoluta de que deseja solicitar a exclusão total da sua conta?\n\nSeu acesso será revogado e os dados limpos pelo administrador.");
+        if (conf) {
+            try {
+                await database.ref(`usuarios/${usuarioLogadoUid}/status_cadastro`).set("solicitou_exclusao");
+                alert("Pedido enviado com sucesso!");
+                if (modalEditarPerfil) modalEditarPerfil.classList.remove('active');
+            } catch(err) { alert("Erro: " + err.message); }
+        }
+    });
+}
 
 // ==========================================================================
 // AUTENTICAÇÃO: CADASTRO, LOGIN E RECUPERAÇÃO DE SENHA
 // ==========================================================================
-document.getElementById('form-cadastro-auth').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const nome = document.getElementById('cad-nome').value.trim();
-    const sobrenome = document.getElementById('cad-sobrenome').value.trim();
-    const whatsapp = inputWhatsApp.value.replace(/\D/g, "");
-    const email = document.getElementById('cad-email').value.trim();
-    const senha = document.getElementById('cad-senha').value;
+const formCadastroAuth = document.getElementById('form-cadastro-auth');
+if (formCadastroAuth) {
+    formCadastroAuth.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const nome = document.getElementById('cad-nome').value.trim();
+        const sobrenome = document.getElementById('cad-sobrenome').value.trim();
+        const whatsapp = inputWhatsApp.value.replace(/\D/g, "");
+        const email = document.getElementById('cad-email').value.trim();
+        const senha = document.getElementById('cad-senha').value;
 
-    if (!validarProvedorEmail(email)) {
-        alert("⚠️ Inscrição Recusada! Utilize um e-mail legítimo convencional.");
-        return;
-    }
-    try {
-        const credencial = await auth.createUserWithEmailAndPassword(email, senha);
-        await database.ref('usuarios/' + credencial.user.uid).set({
-            nome: nome, sobrenome: sobrenome, whatsapp: whatsapp, email: email,
-            status_cadastro: "pendente_pagamento", comprovante_base64: "", jogos_liberados: {}, id_card_comprado: ""
-        });
-    } catch (error) { alert("Erro ao cadastrar: " + error.message); }
-});
+        if (!validarProvedorEmail(email)) {
+            alert("⚠️ Inscrição Recusada! Utilize um e-mail legítimo convencional.");
+            return;
+        }
+        try {
+            const credencial = await auth.createUserWithEmailAndPassword(email, senha);
+            await database.ref('usuarios/' + credencial.user.uid).set({
+                nome: nome, sobrenome: sobrenome, whatsapp: whatsapp, email: email,
+                status_cadastro: "pendente_pagamento", comprovante_base64: "", jogos_liberados: {}, id_card_comprado: ""
+            });
+        } catch (error) { alert("Erro ao cadastrar: " + error.message); }
+    });
+}
 
-document.getElementById('form-login').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const email = document.getElementById('login-email').value.trim();
-    const senha = loginSenhaReal.value;
-    const btnLogar = document.getElementById('btn-logar');
-    btnLogar.innerText = "LOGANDO... AGUARDE"; btnLogar.disabled = true;
-    try { 
-        await auth.signInWithEmailAndPassword(email, senha); 
-    } catch (error) { 
-        alert("Dados incorretos: " + error.message); 
-        btnLogar.innerText = "LOGAR NO HUB"; btnLogar.disabled = false;
-    }
-});
+const formLogin = document.getElementById('form-login');
+if (formLogin) {
+    formLogin.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const email = document.getElementById('login-email').value.trim();
+        const senha = loginSenhaReal.value;
+        const btnLogar = document.getElementById('btn-logar');
+        btnLogar.innerText = "LOGANDO... AGUARDE"; btnLogar.disabled = true;
+        try { 
+            await auth.signInWithEmailAndPassword(email, senha); 
+        } catch (error) { 
+            alert("Dados incorretos: " + error.message); 
+            btnLogar.innerText = "LOGAR NO HUB"; btnLogar.disabled = false;
+        }
+    });
+}
 
-document.getElementById('btn-esqueci-senha').addEventListener('click', async () => {
-    const email = document.getElementById('login-email').value.trim();
-    if (!email) { alert("⚠️ Digite o seu e-mail no campo acima."); return; }
-    try {
-        await auth.sendPasswordResetEmail(email);
-        alert(`🚀 Link enviado com sucesso para: ${email}`);
-    } catch (error) { alert("Erro: " + error.message); }
-});
+const btnEsqueciSenha = document.getElementById('btn-esqueci-senha');
+if (btnEsqueciSenha) {
+    btnEsqueciSenha.addEventListener('click', async () => {
+        const email = document.getElementById('login-email').value.trim();
+        if (!email) { alert("⚠️ Digite o seu e-mail no campo acima."); return; }
+        try {
+            await auth.sendPasswordResetEmail(email);
+            alert(`🚀 Link enviado com sucesso para: ${email}`);
+        } catch (error) { alert("Erro: " + error.message); }
+    });
+}
 
 // Envio de Comprovante
-document.getElementById('btn-fechar-form').addEventListener('click', () => modalFormEnvio.classList.remove('active'));
+const btnFecharForm = document.getElementById('btn-fechar-form');
+if (btnFecharForm) {
+    btnFecharForm.addEventListener('click', () => {
+        if (modalFormEnvio) modalFormEnvio.classList.remove('active');
+    });
+}
 
 const inputComprovante = document.getElementById('comprovante');
 const dropZone = document.getElementById('drop-zone');
 const fileInfo = document.getElementById('file-info');
-dropZone.addEventListener('click', () => inputComprovante.click());
-inputComprovante.addEventListener('change', (e) => verificarArquivo(e.target.files[0]));
+if (dropZone && inputComprovante) {
+    dropZone.addEventListener('click', () => inputComprovante.click());
+    inputComprovante.addEventListener('change', (e) => verificarArquivo(e.target.files[0]));
+}
 
 function verificarArquivo(file) {
-    if (!file) return;
+    if (!file || !fileInfo || !inputComprovante) return;
     if (file.size > 1048576) { alert("Arquivo maior que 1MB."); inputComprovante.value = ""; return; }
     fileInfo.innerHTML = `✅ Selecionado: <strong>${file.name}</strong>`;
 }
@@ -352,28 +408,32 @@ const converterBase64 = (file) => {
     });
 };
 
-document.getElementById('form-comprovante').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const arquivo = inputComprovante.files[0];
-    if (!arquivo) return alert("Anexe o arquivo!");
-    const cardEscolhidoId = document.getElementById('id-card-escolhido-compra').value;
-    const btn = document.getElementById('btn-enviar-tudo');
-    btn.innerText = "ENVIANDO..."; btn.disabled = true;
-    try {
-        const base64Str = await converterBase64(arquivo);
-        let base64Final = arquivo.type === "application/pdf" ? base64Str : base64Str.slice(0, 49000);
-        await database.ref(`usuarios/${usuarioLogadoUid}/comprovante_base64`).set(base64Final);
-        await database.ref(`usuarios/${usuarioLogadoUid}/status_cadastro`).set("comprovante_enviado");
-        if (cardEscolhidoId) {
-            await database.ref(`usuarios/${usuarioLogadoUid}/id_card_comprado`).set(cardEscolhidoId);
-        }
-        alert("🚀 Comprovante enviado com sucesso! Aguarde a liberação do administrador.");
-        modalFormEnvio.classList.remove('active');
-    } catch (error) { alert("Erro: " + error.message); }
-    finally { btn.innerText = "CONCLUIR INSCRIÇÃO"; btn.disabled = false; }
-});
+const formComprovante = document.getElementById('form-comprovante');
+if (formComprovante) {
+    formComprovante.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const arquivo = inputComprovante.files[0];
+        if (!arquivo) return alert("Anexe o arquivo!");
+        const cardEscolhidoId = document.getElementById('id-card-escolhido-compra').value;
+        const btn = document.getElementById('btn-enviar-tudo');
+        btn.innerText = "ENVIANDO..."; btn.disabled = true;
+        try {
+            const base64Str = await converterBase64(arquivo);
+            let base64Final = arquivo.type === "application/pdf" ? base64Str : base64Str.slice(0, 49000);
+            await database.ref(`usuarios/${usuarioLogadoUid}/comprovante_base64`).set(base64Final);
+            await database.ref(`usuarios/${usuarioLogadoUid}/status_cadastro`).set("comprovante_enviado");
+            if (cardEscolhidoId) {
+                await database.ref(`usuarios/${usuarioLogadoUid}/id_card_comprado`).set(cardEscolhidoId);
+            }
+            alert("🚀 Comprovante enviado com sucesso! Aguarde a liberação do administrador.");
+            if (modalFormEnvio) modalFormEnvio.classList.remove('active');
+        } catch (error) { alert("Erro: " + error.message); }
+        finally { btn.innerText = "CONCLUIR INSCRIÇÃO"; btn.disabled = false; }
+    });
+}
 
 function ouvirCardsDoCliente(uid) {
+    if (!gridCardsCliente) return;
     database.ref(`usuarios/${uid}`).on('value', snapshotUsuario => {
         gridCardsCliente.innerHTML = "";
         const dadosUser = snapshotUsuario.val() || {};
@@ -386,7 +446,7 @@ function ouvirCardsDoCliente(uid) {
             cardElement.style.borderColor = "#00ff66";
             cardElement.innerHTML = `
                 <div style="height:280px; display:flex; align-items:center; justify-content:center; background:#161c26;">
-                    <span style="font-size:4rem; animation: fadeIn 1s infinite alternate;">⏳</span>
+                    <span style="font-size:4rem;">⏳</span>
                 </div>
                 <h4>Analisando Comprovante...</h4>
             `;
@@ -415,6 +475,7 @@ function ouvirCardsDoCliente(uid) {
 
 function abrirModalJogo(card, modoLojaVenda = false, cardId = "") {
     const imgCapa = document.getElementById('modal-jogo-capa');
+    if (!imgCapa) return;
     imgCapa.src = card.capa_url;
     document.getElementById('modal-jogo-titulo').innerText = card.titulo;
     document.getElementById('modal-jogo-descricao').innerText = card.descricao;
@@ -432,68 +493,85 @@ function abrirModalJogo(card, modoLojaVenda = false, cardId = "") {
     const txtPixPreviewReal = document.getElementById('texto-pix-dinamico-preview-real');
     const btnCopiarPixPreview = document.getElementById('btn-copiar-pix-preview-dinamico');
 
-    btnRevelarSenha.style.display = "block";
-    areaTextoSenha.style.display = "none";
-    containerSenha.style.display = "none";
-    containerDownloads.style.display = "none";
-    btnAdquirirLoja.style.display = "none";
-    blocoPixPreview.style.display = "none";
+    if (btnRevelarSenha) btnRevelarSenha.style.display = "block";
+    if (areaTextoSenha) areaTextoSenha.style.display = "none";
+    if (containerSenha) containerSenha.style.display = "none";
+    if (containerDownloads) containerDownloads.style.display = "none";
+    if (btnAdquirirLoja) btnAdquirirLoja.style.display = "none";
+    if (blocoPixPreview) blocoPixPreview.style.display = "none";
 
     const precoFinalCard = card.preco || "R$ 10,00";
     const pixFinalCard = card.pix || "88988470190";
 
     if (modoLojaVenda) {
-        txtPixPreviewReal.innerText = pixFinalCard;
-        blocoPixPreview.style.display = "block";
-        btnCopiarPixPreview.onclick = () => { executarCopiaGamerBlindada(pixFinalCard, btnCopiarPixPreview); };
+        if (txtPixPreviewReal) txtPixPreviewReal.innerText = pixFinalCard;
+        if (blocoPixPreview) blocoPixPreview.style.display = "block";
+        if (btnCopiarPixPreview) {
+            btnCopiarPixPreview.onclick = () => { executarCopiaGamerBlindada(pixFinalCard, btnCopiarPixPreview); };
+        }
 
         document.getElementById('texto-preco-botao-dinamico').innerText = precoFinalCard;
-        btnAdquirirLoja.style.display = "block";
+        if (btnAdquirirLoja) btnAdquirirLoja.style.display = "block";
         
-        btnAdquirirLoja.onclick = () => {
-            fecharModalJogo();
-            document.getElementById('id-card-escolhido-compra').value = cardId;
-            document.getElementById('titulo-envio-comprovante-dinamico').innerText = `Adquirir: ${card.titulo}`;
-            
-            document.getElementById('texto-preco-modal-checkout').innerText = precoFinalCard;
-            document.getElementById('texto-chave-pix-checkout').innerText = pixFinalCard;
-            
-            document.getElementById('btn-copiar-pix-checkout').onclick = () => {
-                executarCopiaGamerBlindada(pixFinalCard, document.getElementById('btn-copiar-pix-checkout'));
+        if (btnAdquirirLoja) {
+            btnAdquirirLoja.onclick = () => {
+                fecharModalJogo();
+                document.getElementById('id-card-escolhido-compra').value = cardId;
+                document.getElementById('titulo-envio-comprovante-dinamico').innerText = `Adquirir: ${card.titulo}`;
+                document.getElementById('texto-preco-modal-checkout').innerText = precoFinalCard;
+                document.getElementById('texto-chave-pix-checkout').innerText = pixFinalCard;
+                
+                const btnCopiarCheckout = document.getElementById('btn-copiar-pix-checkout');
+                if (btnCopiarCheckout) {
+                    btnCopiarCheckout.onclick = () => {
+                        executarCopiaGamerBlindada(pixFinalCard, btnCopiarCheckout);
+                    };
+                }
+                if (modalFormEnvio) modalFormEnvio.classList.add('active');
             };
-            
-            modalFormEnvio.classList.add('active');
-        };
+        }
     } else {
-        containerDownloads.style.display = "flex";
+        if (containerDownloads) containerDownloads.style.display = "flex";
         if (card.senha_patch && card.senha_patch.trim() !== "") {
-            textoSenhaReal.innerText = card.senha_patch.trim();
-            containerSenha.style.display = "block";
-            btnRevelarSenha.onclick = () => { btnRevelarSenha.style.display = "none"; areaTextoSenha.style.display = "block"; };
-            btnCopiarSenha.onclick = () => { executarCopiaGamerBlindada(textoSenhaReal.innerText, btnCopiarSenha); };
+            if (textoSenhaReal) textoSenhaReal.innerText = card.senha_patch.trim();
+            if (containerSenha) containerSenha.style.display = "block";
+            if (btnRevelarSenha && areaTextoSenha) {
+                btnRevelarSenha.onclick = () => { btnRevelarSenha.style.display = "none"; areaTextoSenha.style.display = "block"; };
+            }
+            if (btnCopiarSenha && textoSenhaReal) {
+                btnCopiarSenha.onclick = () => { executarCopiaGamerBlindada(textoSenhaReal.innerText, btnCopiarSenha); };
+            }
         }
         
-        containerDownloads.innerHTML = "";
-        if (card.botoes) {
-            card.botoes.forEach(btn => {
-                const buttonElement = document.createElement('button');
-                buttonElement.className = 'btn-download-dinamico';
-                buttonElement.innerText = btn.texto;
-                buttonElement.style.width = "100%";
-                buttonElement.style.cursor = "pointer";
-                buttonElement.addEventListener('dragstart', (e) => e.preventDefault());
-                buttonElement.addEventListener('click', () => { window.open(btn.url, '_blank'); });
-                containerDownloads.appendChild(buttonElement);
-            });
+        if (containerDownloads) {
+            containerDownloads.innerHTML = "";
+            if (card.botoes) {
+                card.botoes.forEach(btn => {
+                    const buttonElement = document.createElement('button');
+                    buttonElement.className = 'btn-download-dinamico';
+                    buttonElement.innerText = btn.texto;
+                    buttonElement.style.width = "100%";
+                    buttonElement.style.cursor = "pointer";
+                    buttonElement.addEventListener('dragstart', (e) => e.preventDefault());
+                    buttonElement.addEventListener('click', () => { window.open(btn.url, '_blank'); });
+                    containerDownloads.appendChild(buttonElement);
+                });
+            }
         }
     }
-    modalDetalhesJogo.classList.add('active');
+    if (modalDetailsContainerGamer) modalDetailsContainerGamer.classList.add('active');
 }
-function fecharModalJogo() { modalDetalhesJogo.classList.remove('active'); }
 
-modalDetalhesJogo.addEventListener('contextmenu', (e) => { e.preventDefault(); return false; });
+function fecharModalJogo() { 
+    if (modalDetailsContainerGamer) modalDetailsContainerGamer.classList.remove('active'); 
+}
+
+if (modalDetailsContainerGamer) {
+    modalDetailsContainerGamer.addEventListener('contextmenu', (e) => { e.preventDefault(); return false; });
+}
+
 window.addEventListener('keydown', (e) => {
-    if (modalDetalhesJogo.classList.contains('active')) {
+    if (modalDetailsContainerGamer && modalDetailsContainerGamer.classList.contains('active')) {
         if (e.key === "F12" || (e.ctrlKey && (e.shiftKey && e.key === "I" || e.key === "u" || e.key === "U"))) {
             e.preventDefault(); return false;
         }
@@ -506,23 +584,40 @@ window.addEventListener('keydown', (e) => {
 function ouvirEConstruirMenuCliente() {
     const menuContainer = document.getElementById('area-menu-dinamico');
     const linksList = document.getElementById('container-links-menu');
+    if (!linksList || !menuContainer) return;
+
     database.ref('configuracao_menu_json').on('value', snapshot => {
-        linksList.innerHTML = ""; const jsonString = snapshot.val() || "";
+        linksList.innerHTML = ""; 
+        const jsonString = snapshot.val() || "";
         if (!jsonString.trim()) { menuContainer.style.display = "none"; return; }
         try {
             const categorias = JSON.parse(jsonString);
             if (Array.isArray(categorias) && categorias.length > 0) {
                 categorias.forEach(item => {
-                    const liCat = document.createElement('li'); liCat.className = 'nav-dinamica-item';
-                    const aCat = document.createElement('a'); aCat.className = 'nav-dinamica-link'; aCat.innerText = item.categoria;
-                    if (item.tipo === "link" && item.url_categoria) { aCat.href = item.url_categoria; aCat.target = "_blank"; }
+                    const liCat = document.createElement('li'); 
+                    liCat.className = 'nav-dinamica-item';
+                    
+                    const aCat = document.createElement('a'); 
+                    aCat.className = 'nav-link-item'; 
+                    aCat.innerText = item.categoria;
+                    
+                    if (item.tipo === "link" && item.url_categoria) { 
+                        aCat.href = item.url_categoria; 
+                        aCat.target = "_blank"; 
+                    }
                     liCat.appendChild(aCat);
+                    
                     if (item.tipo !== "link" && item.subcategorias && Array.isArray(item.subcategorias) && item.subcategorias.length > 0) {
-                        const ulSub = document.createElement('ul'); ulSub.className = 'submenu-dinamico';
+                        const ulSub = document.createElement('ul'); 
+                        ulSub.className = 'submenu-dinamico';
                         item.subcategorias.forEach(sub => {
-                            const liSub = document.createElement('li'); const aSub = document.createElement('a');
-                            aSub.innerText = sub.texto; aSub.href = sub.url; aSub.target = "_blank";
-                            liSub.appendChild(aSub); ulSub.appendChild(liSub);
+                            const liSub = document.createElement('li'); 
+                            const aSub = document.createElement('a');
+                            aSub.innerText = sub.texto; 
+                            aSub.href = sub.url; 
+                            aSub.target = "_blank";
+                            liSub.appendChild(aSub); 
+                            ulSub.appendChild(liSub);
                         });
                         liCat.appendChild(ulSub);
                     }
@@ -536,7 +631,10 @@ function ouvirEConstruirMenuCliente() {
 
 function inicializarBotaoWhatsApp() {
     const whatsappNumero = "5588988470190"; 
-    document.getElementById('btn-whatsapp-flutuante').href = `https://api.whatsapp.com/send?phone=${whatsappNumero}&text=Ol%C3%A1,%20preciso%20de%20ajuda%20no%20Hub!`;
+    const btnWhats = document.getElementById('btn-whatsapp-flutuante');
+    if (btnWhats) {
+        btnWhats.href = `https://api.whatsapp.com/send?phone=${whatsappNumero}&text=Ol%C3%A1,%20preciso%20de%20ajuda%20no%20Hub!`;
+    }
 }
 
 // ==========================================================================
@@ -544,6 +642,7 @@ function inicializarBotaoWhatsApp() {
 // ==========================================================================
 function ouvirEPovoarMenuVisualAdmin() {
     const containerVisual = document.getElementById('construtor-menu-visual-container');
+    if (!containerVisual) return;
     database.ref('configuracao_menu_json').once('value', snapshot => {
         containerVisual.innerHTML = ""; const rawJson = snapshot.val() || "";
         if (!rawJson.trim()) return;
@@ -560,6 +659,7 @@ function ouvirEPovoarMenuVisualAdmin() {
 
 function adicionarBlocoCategoriaVisual(nomeCategoria = "", subcategoriasArr = [], tipoCategoria = "menu", urlCategoria = "") {
     const containerVisual = document.getElementById('construtor-menu-visual-container');
+    if (!containerVisual) return;
     const blocoId = 'cat-' + Date.now() + Math.floor(Math.random() * 100);
     const divBloco = document.createElement('div'); divBloco.className = 'bloco-categoria-visual'; divBloco.id = blocoId;
     divBloco.innerHTML = `
@@ -587,16 +687,24 @@ function adicionarBlocoCategoriaVisual(nomeCategoria = "", subcategoriasArr = []
 
 function alternarTipoCategoriaVisual(blocoId) {
     const bloco = document.getElementById(blocoId);
+    if (!bloco) return;
     const tipo = bloco.querySelector(`input[name="tipo-${blocoId}"]:checked`).value;
     const areaSub = bloco.querySelector('.wrapper-subcategorias-area');
     const areaUrlDireta = bloco.querySelector('.container-url-categoria-direta');
-    if (tipo === 'link') { areaSub.style.display = 'none'; areaUrlDireta.style.display = 'block'; }
-    else { areaSub.style.display = 'block'; areaUrlDireta.style.display = 'none'; }
+    if (tipo === 'link') { 
+        if (areaSub) areaSub.style.display = 'none'; 
+        if (areaUrlDireta) areaUrlDireta.style.display = 'block'; 
+    } else { 
+        if (areaSub) areaSub.style.display = 'block'; 
+        if (areaUrlDireta) areaUrlDireta.style.display = 'none'; 
+    }
 }
 
 function adicionarLinhaSubcategoriaVisual(blocoId, txtLink = "", urlLink = "") {
     const bloco = document.getElementById(blocoId);
+    if (!bloco) return;
     const containerRows = bloco.querySelector('.container-subcategorias-rows');
+    if (!containerRows) return;
     const rowId = 'row-' + Date.now() + Math.floor(Math.random() * 100);
     const divRow = document.createElement('div'); divRow.className = 'linha-subcategoria-visual'; divRow.id = rowId;
     divRow.innerHTML = `
@@ -607,66 +715,76 @@ function adicionarLinhaSubcategoriaVisual(blocoId, txtLink = "", urlLink = "") {
     containerRows.appendChild(divRow);
 }
 
-document.getElementById('btn-salvar-visual-menu').addEventListener('click', async () => {
-    const blocos = document.querySelectorAll('.bloco-categoria-visual');
-    const estruturaMenuFinal = []; let dadosValidos = true;
-    blocos.forEach(bloco => {
-        const nomeCat = bloco.querySelector('.input-nome-categoria').value.trim(); if (!nomeCat) return;
-        const tipoSelecionado = bloco.querySelector(`input[name="tipo-${bloco.id}"]:checked`).value;
-        const urlCategoriaDireta = bloco.querySelector('.input-url-categoria').value.trim();
-        const subcategorias = [];
-        if (tipoSelecionado === "link") { if (!urlCategoriaDireta) dadosValidos = false; }
-        else {
-            const linesSub = bloco.querySelectorAll('.linha-subcategoria-visual');
-            linesSub.forEach(linha => {
-                const txt = linha.querySelector('.sub-txt').value.trim();
-                const url = linha.querySelector('.sub-url').value.trim();
-                if (txt && url) subcategorias.push({ texto: txt, url: url });
-                else if (txt || url) dadosValidos = false;
-            });
-        }
-        estruturaMenuFinal.push({ categoria: nomeCat, tipo: tipoSelecionado, url_categoria: tipoSelecionado === "link" ? urlCategoriaDireta : "", subcategorias: tipoSelecionado === "menu" ? subcategorias : [] });
+const btnSalvarVisualMenu = document.getElementById('btn-salvar-visual-menu');
+if (btnSalvarVisualMenu) {
+    btnSalvarVisualMenu.addEventListener('click', async () => {
+        const blocos = document.querySelectorAll('.bloco-categoria-visual');
+        const estruturaMenuFinal = []; let dadosValidos = true;
+        blocos.forEach(bloco => {
+            const nomeCat = bloco.querySelector('.input-nome-categoria').value.trim(); if (!nomeCat) return;
+            const tipoSelecionado = bloco.querySelector(`input[name="tipo-${bloco.id}"]:checked`).value;
+            const urlCategoriaDireta = bloco.querySelector('.input-url-categoria').value.trim();
+            const subcategorias = [];
+            if (tipoSelecionado === "link") { if (!urlCategoriaDireta) dadosValidos = false; }
+            else {
+                const linesSub = bloco.querySelectorAll('.linha-subcategoria-visual');
+                linesSub.forEach(linha => {
+                    const txt = inlineSub = linha.querySelector('.sub-txt').value.trim();
+                    const url = linha.querySelector('.sub-url').value.trim();
+                    if (txt && url) subcategorias.push({ texto: txt, url: url });
+                    else if (txt || url) dadosValidos = false;
+                });
+            }
+            estruturaMenuFinal.push({ categoria: nomeCat, tipo: tipoSelecionado, url_categoria: tipoSelecionado === "link" ? urlCategoriaDireta : "", subcategorias: tipoSelecionado === "menu" ? subcategorias : [] });
+        });
+        if (!dadosValidos) { alert("⚠️ Existem campos incompletos no construtor."); return; }
+        try {
+            await database.ref('configuracao_menu_json').set(estruturaMenuFinal.length > 0 ? JSON.stringify(estruturaMenuFinal, null, 2) : "");
+            alert("🚀 Menu Horizontal updated successfully!");
+        } catch (e) { alert("Erro: " + e.message); }
     });
-    if (!dadosValidos) { alert("⚠️ Existem campos incompletos no construtor."); return; }
-    try {
-        await database.ref('configuracao_menu_json').set(estruturaMenuFinal.length > 0 ? JSON.stringify(estruturaMenuFinal, null, 2) : "");
-        alert("🚀 Menu Horizontal atualizado com sucesso!");
-    } catch (e) { alert("Erro: " + e.message); }
-});
+}
 
 function removerBlocoCategoriaVisual(blocoId) {
-    if (confirm("⚠️ Deseja deletar toda essa categoria?")) { document.getElementById(blocoId).remove(); }
+    if (confirm("⚠️ Deseja deletar toda essa categoria?")) { 
+        const elem = document.getElementById(blocoId);
+        if (elem) elem.remove(); 
+    }
 }
 
 // ==========================================================================
 // CONTROLE DE CARDS DE JOGOS (ADMIN)
 // ==========================================================================
-document.getElementById('form-criar-card').addEventListener('submit', async (e) => {
-    e.preventDefault(); const idEdicao = document.getElementById('card-id-edicao').value;
-    const botoes = [];
-    for (let i = 1; i <= 4; i++) {
-        const txt = document.getElementById(`btn-txt-${i}`).value.trim();
-        const url = document.getElementById(`btn-url-${i}`).value.trim();
-        if (txt && url) botoes.push({ texto: txt, url: url });
-    }
-    
-    const dadosCard = { 
-        titulo: document.getElementById('card-titulo').value.trim(), 
-        capa_url: document.getElementById('card-capa').value.trim(), 
-        descricao: document.getElementById('card-descricao').value.trim(), 
-        preco: document.getElementById('card-preco').value.trim(), 
-        pix: document.getElementById('card-pix').value.trim(), 
-        senha_patch: document.getElementById('card-senha-patch').value.trim(), 
-        botoes: botoes 
-    };
+const formCriarCard = document.getElementById('form-criar-card');
+if (formCriarCard) {
+    formCriarCard.addEventListener('submit', async (e) => {
+        e.preventDefault(); const idEdicao = document.getElementById('card-id-edicao').value;
+        const botoes = [];
+        for (let i = 1; i <= 4; i++) {
+            const txt = document.getElementById(`btn-txt-${i}`).value.trim();
+            const url = document.getElementById(`btn-url-${i}`).value.trim();
+            if (txt && url) botoes.push({ texto: txt, url: url });
+        }
+        
+        const dadosCard = { 
+            titulo: document.getElementById('card-titulo').value.trim(), 
+            capa_url: document.getElementById('card-capa').value.trim(), 
+            descricao: document.getElementById('card-descricao').value.trim(), 
+            preco: document.getElementById('card-preco').value.trim(), 
+            pix: document.getElementById('card-pix').value.trim(), 
+            senha_patch: document.getElementById('card-senha-patch').value.trim(), 
+            botoes: botoes 
+        };
 
-    try {
-        if (idEdicao) { await database.ref(`cards_disponiveis/${idEdicao}`).set(dadosCard); alert("🔄 Card atualizado!"); cancelarEdicaoCard(); }
-        else { await database.ref('cards_disponiveis').push(dadosCard); alert("🎯 Novo Card criado!"); document.getElementById('form-criar-card').reset(); }
-    } catch (error) { alert("Erro: " + error.message); }
-});
+        try {
+            if (idEdicao) { await database.ref(`cards_disponiveis/${idEdicao}`).set(dadosCard); alert("🔄 Card atualizado!"); cancelarEdicaoCard(); }
+            else { await database.ref('cards_disponiveis').push(dadosCard); alert("🎯 Novo Card criado!"); formCriarCard.reset(); }
+        } catch (error) { alert("Erro: " + error.message); }
+    });
+}
 
 function ouvirCardsGlobaisAdmin() {
+    if (!listaCardsCriados) return;
     database.ref('cards_disponiveis').on('value', snapshot => {
         listaCardsCriados.innerHTML = ""; const cards = snapshot.val();
         if (!cards) { listaCardsCriados.innerHTML = `<p style="color:#aaa; font-size:0.9rem;">Nenhum card.</p>`; return; }
@@ -709,25 +827,35 @@ function carregarCardParaEdicao(id) {
 }
 
 function cancelarEdicaoCard() {
-    document.getElementById('card-id-edicao').value = ""; document.getElementById('form-criar-card').reset();
+    const hiddenId = document.getElementById('card-id-edicao');
+    if (hiddenId) hiddenId.value = "";
+    if (formCriarCard) formCriarCard.reset();
     document.getElementById('titulo-form-card').innerText = "1. Criar Novo Card de Jogo";
-    document.getElementById('btn-cancelar-edicao').style.display = "none"; document.getElementById('btn-salvar-card').innerText = "SALVAR CARD";
+    document.getElementById('btn-cancelar-edicao').style.display = "none"; 
+    document.getElementById('btn-salvar-card').innerText = "SALVAR CARD";
 }
-document.getElementById('btn-cancelar-edicao').addEventListener('click', cancelarEdicaoCard);
+const btnCancelarEdicao = document.getElementById('btn-cancelar-edicao');
+if (btnCancelarEdicao) {
+    btnCancelarEdicao.addEventListener('click', cancelarEdicaoCard);
+}
 
 async function deletarCardDoSistema(id) {
     if (confirm("⚠️ Deseja apagar este card?")) { await database.ref(`cards_disponiveis/${id}`).remove(); alert("Card excluído."); }
 }
 
-document.getElementById('btn-exportar-cards').addEventListener('click', () => {
-    database.ref('cards_disponiveis').once('value', snapshot => {
-        const data = snapshot.val(); if(!data) return alert("Vazio.");
-        const blob = new Blob([JSON.stringify(data, null, 2)], {type : 'application/json'});
-        const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'backup-cards.json'; a.click();
+const btnExportarCards = document.getElementById('btn-exportar-cards');
+if (btnExportarCards) {
+    btnExportarCards.addEventListener('click', () => {
+        database.ref('cards_disponiveis').once('value', snapshot => {
+            const data = snapshot.val(); if(!data) return alert("Vazio.");
+            const blob = new Blob([JSON.stringify(data, null, 2)], {type : 'application/json'});
+            const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'backup-cards.json'; a.click();
+        });
     });
-});
+}
 
 function inicializarPainelAdmin() {
+    if (!listaUsuariosAdmin) return;
     database.ref('cards_disponiveis').once('value', snapshotCards => {
         const cacheCardsGlobais = snapshotCards.val() || {};
 
@@ -861,6 +989,7 @@ function abrirComprovanteNovaAba(uid) {
         const base64Data = snapshot.val();
         if (base64Data) {
             const novaAba = window.open();
+            if (!novaAba) return;
             if (base64Data.startsWith("data:application/pdf")) { novaAba.document.write(`<iframe src="${base64Data}" width="100%" height="100%" style="border:none;"></iframe>`); }
             else { novaAba.document.write(`<body style="background:#0b0e14; margin:0; display:flex; align-items:center; justify-content:center;"><img src="${base64Data}" style="max-width:100%; max-height:100vh; border:2px solid #00ff66; border-radius:8px;"></body>`); }
         }
@@ -921,36 +1050,38 @@ async function deletarUsuarioDoBancoTotal(uid, email) {
     }
 }
 
-document.getElementById('btn-reset-geral-temporada').addEventListener('click', async () => {
-    const conf1 = confirm("⚠️ ATENÇÃO - FIM DA PRÉ-VENDA:\n\nDeseja continuar?");
-    if (conf1) {
-        try {
-            const btnReset = document.getElementById('btn-reset-geral-temporada');
-            btnReset.innerText = "ARQUIVANDO TEMPORADA..."; btnReset.disabled = true;
-            const snapshot = await database.ref('usuarios').once('value');
-            const usuarios = snapshot.val();
-            if (usuarios) {
-                const loteMudancas = {};
-                Object.keys(usuarios).forEach(uid => {
-                    if (usuarios[uid].email !== "admin@admin.com" && usuarios[uid].status_cadastro === "pago") {
-                        loteMudancas[`usuarios/${uid}/status_cadastro`] = "cliente_cadastrado";
-                        loteMudancas[`usuarios/${uid}/comprovante_base64`] = ""; 
-                        loteMudancas[`usuarios/${uid}/id_card_comprado`] = ""; 
-                    }
-                });
-                await database.ref().update(loteMudancas);
-                alert("🗂️ Temporada encerrada e arquivada com sucesso!");
+const btnResetGeral = document.getElementById('btn-reset-geral-temporada');
+if (btnResetGeral) {
+    btnResetGeral.addEventListener('click', async () => {
+        const conf1 = confirm("⚠️ ATENÇÃO - FIM DA PRÉ-VENDA:\n\nDeseja continuar?");
+        if (conf1) {
+            try {
+                btnResetGeral.innerText = "ARQUIVANDO TEMPORADA..."; btnResetGeral.disabled = true;
+                const snapshot = await database.ref('usuarios').once('value');
+                const usuarios = snapshot.val();
+                if (usuarios) {
+                    const loteMudancas = {};
+                    Object.keys(usuarios).forEach(uid => {
+                        if (usuarios[uid].email !== "admin@admin.com" && usuarios[uid].status_cadastro === "pago") {
+                            loteMudancas[`usuarios/${uid}/status_cadastro`] = "cliente_cadastrado";
+                            loteMudancas[`usuarios/${uid}/comprovante_base64`] = ""; 
+                            loteMudancas[`usuarios/${uid}/id_card_comprado`] = ""; 
+                        }
+                    });
+                    await database.ref().update(loteMudancas);
+                    alert("🗂️ Temporada encerrada e arquivada com sucesso!");
+                }
+            } catch (error) { alert("Erro no reset geral: " + error.message); }
+            finally {
+                btnResetGeral.innerText = "📦 ARQUIVAR APROVADOS DA TEMPORADA"; btnResetGeral.disabled = false;
             }
-        } catch (error) { alert("Erro no reset geral: " + error.message); }
-        finally {
-            const btnReset = document.getElementById('btn-reset-geral-temporada');
-            btnReset.innerText = "📦 ARQUIVAR APROVADOS DA TEMPORADA"; btnReset.disabled = false;
         }
-    }
-});
+    });
+}
 
 document.addEventListener('contextmenu', (e) => {
-    if (document.getElementById('view-cliente').classList.contains('active')) {
+    const viewCli = document.getElementById('view-cliente');
+    if (viewCli && viewCli.classList.contains('active')) {
         const target = e.target.closest('.game-card, .modal-content, img, #container-senha-protegida-modal');
         if (target) { e.preventDefault(); return false; }
     }
