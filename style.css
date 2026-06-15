@@ -240,6 +240,37 @@ body {
     box-shadow: 0 0 8px rgba(0, 255, 102, 0.3);
 }
 
+/* Estilos extras adicionais para o submenu retrátil dinâmico */
+.nav-dinamica-item {
+    position: relative;
+}
+.submenu-dinamico {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    background: #121824;
+    border: 1px solid #1f2a3c;
+    padding: 5px 0;
+    list-style: none;
+    border-radius: 4px;
+    z-index: 1000;
+}
+.submenu-dinamico li a {
+    display: block;
+    padding: 6px 15px;
+    color: #ffffff;
+    text-decoration: none;
+    font-size: 0.8rem;
+}
+.submenu-dinamico li a:hover {
+    background: #1c253c;
+    color: #00ff66;
+}
+.nav-dinamica-item:hover .submenu-dinamico {
+    display: block;
+}
+
 /* ==========================================================================
    GRID DE CARDS E EXIBIÇÃO DE JOGOS
    ========================================================================== */
@@ -302,6 +333,10 @@ body {
     background-color: rgba(2, 6, 13, 0.85);
     backdrop-filter: blur(4px);
     z-index: 1500;
+}
+
+#modal-details-container-gamer.active {
+    display: block;
 }
 
 .modal-jogos {
@@ -522,11 +557,12 @@ body {
     padding-right: 5px;
 }
 
-.user-item-box {
+.user-item-box, .user-item {
     background-color: #0b0e14;
     border: 1px solid #1f2a3c;
     border-radius: 6px;
     padding: 15px;
+    margin-bottom: 10px;
 }
 
 .user-item-header {
@@ -567,16 +603,23 @@ body {
     margin-top: 12px;
 }
 
-.btn-aprovar-pedido {
-    flex: 1;
+.btn-aprovar-pedido, .btn-inject {
+    width: 100%;
     background-color: #00ff66;
     color: #02060d;
     border: none;
-    padding: 8px;
+    padding: 10px;
     font-weight: bold;
-    font-size: 0.8rem;
+    font-size: 0.85rem;
     border-radius: 4px;
     cursor: pointer;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    transition: background 0.2s;
+}
+
+.btn-aprovar-pedido:hover, .btn-inject:hover {
+    background-color: #00cc55;
 }
 
 .btn-recusar-pedido {
@@ -591,6 +634,7 @@ body {
 }
 
 .btn-visualizar-comprovante {
+    display: block;
     background-color: #1c253c;
     border: 1px solid #1f2a3c;
     color: #ffffff;
@@ -601,6 +645,7 @@ body {
     cursor: pointer;
     text-decoration: none;
     text-align: center;
+    margin-bottom: 10px;
 }
 
 .btn-visualizar-comprovante:hover {
@@ -623,24 +668,32 @@ body {
     margin-bottom: 12px;
 }
 
-.bloco-categoria-header {
-    display: flex;
-    gap: 10px;
-    margin-bottom: 10px;
+.bloco-categoria-visual input {
+    background: #0b0e14;
+    border: 1px solid #1f2a3c;
+    color: #fff;
+    padding: 8px;
+    border-radius: 4px;
+    width: 100%;
+    margin-bottom: 8px;
 }
 
-.lista-links-visual-container {
+.radio-tipo-container {
     display: flex;
-    flex-direction: column;
-    gap: 8px;
-    padding-left: 15px;
-    border-left: 2px dashed #1f2a3c;
+    gap: 15px;
     margin-bottom: 10px;
+    font-size: 0.85rem;
+    color: #8899a6;
 }
 
-.linha-link-visual {
+.linha-subcategoria-visual {
     display: flex;
     gap: 8px;
+    margin-bottom: 6px;
+}
+
+.linha-subcategoria-visual input {
+    margin-bottom: 0;
 }
 
 /* ==========================================================================
