@@ -61,8 +61,16 @@
                 <h3 id="texto-alerta-titulo">Garante as novas atualizações!</h3>
                 <p id="texto-alerta-desc">Envie o seu novo comprovante para liberar mais jogos no seu painel.</p>
                 
-                <div class="container-preco-tag">
+                <div class="container-preco-tag" style="margin-bottom: 15px;">
                     Valor de liberação por Patch: <span class="tag-preco-gamer">R$ 10,00</span>
+                </div>
+                
+                <div style="background: #161c26; border: 1px solid #242f41; padding: 12px; border-radius: 6px; max-width: 340px; margin: 0 auto 15px auto; display: flex; align-items: center; justify-content: space-between; gap: 10px;">
+                    <div style="text-align: left;">
+                        <span style="font-size: 0.75rem; color: #8899a6; display: block; text-transform: uppercase; letter-spacing: 0.5px;">Chave PIX (Celular):</span>
+                        <strong id="valor-chave-pix" style="color: #00ff66; font-size: 1.05rem; letter-spacing: 0.5px;">88988470190</strong>
+                    </div>
+                    <button type="button" id="btn-copiar-pix-painel" class="btn-download-dinamico" style="margin:0; padding: 6px 12px; font-size: 0.75rem; border-radius: 4px; cursor: pointer;">📋 Copiar</button>
                 </div>
                 
                 <button id="btn-abrir-formulario" class="btn-gamer">Adquira já o seu jogo</button>
@@ -136,7 +144,13 @@
                         <input type="text" id="btn-txt-4" placeholder="Texto Botão 4">
                         <input type="url" id="btn-url-4" placeholder="URL Download 4">
                     </div>
-                    <div style="display:flex; gap:10px;">
+
+                    <h4>Segurança e Chaves do Patch</h4>
+                    <div class="link-group" style="grid-template-columns: 1fr;">
+                        <input type="text" id="card-senha-patch" placeholder="Senha de Descompactação (Ex: BOMBA_PATCH_2026)">
+                    </div>
+
+                    <div style="display:flex; gap:10px; margin-top:10px;">
                         <button type="submit" id="btn-salvar-card" class="btn-gamer">SALVAR CARD</button>
                         <button type="button" id="btn-cancelar-edicao" class="btn-sair" style="display:none; margin-top:0; height:45px;">Cancelar</button>
                     </div>
@@ -191,6 +205,16 @@
                 <div class="modal-info">
                     <h3 id="modal-jogo-titulo">Título</h3>
                     <p id="modal-jogo-descricao">Descrição</p>
+                    
+                    <div id="container-senha-protegida-modal" style="margin-bottom: 15px; background: #161c26; border: 1px dashed #242f41; padding: 12px; border-radius: 6px; display: none; text-align: center;">
+                        <button type="button" id="btn-revelar-senha-modal" class="btn-download-dinamico" style="margin: 0; width: 100%; font-size: 0.8rem; border-color: #ffaa00; color: #ffaa00;">🔑 Exibir Senha do Patch</button>
+                        <div id="area-texto-senha-secreta" style="display: none; margin-top: 5px;">
+                            <span style="font-size: 0.75rem; color: #8899a6; display: block; text-transform: uppercase;">Senha de Extração:</span>
+                            <strong id="texto-senha-secreta-real" style="color: #00ff66; font-size: 1.2rem; letter-spacing: 1px; display: block; margin: 5px 0; user-select: none;">---</strong>
+                            <button type="button" id="btn-copiar-senha-modal" class="btn-link" style="color: #ffaa00; font-size: 0.8rem; text-decoration: underline;">📋 Copiar Chave</button>
+                        </div>
+                    </div>
+
                     <div id="modal-jogo-botoes" class="area-botoes-download">
                         </div>
                 </div>
