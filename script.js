@@ -145,12 +145,11 @@ auth.onAuthStateChanged(user => {
 
                     if (dados.status_cadastro === "comprovante_enviado") {
                         areaPendente.style.display = "block";
-                        document.getElementById('caixa-pix-generall-backup').style.display = "none";
+                        document.getElementById('caixa-pix-geral-backup').style.display = "none";
                         document.getElementById('texto-alerta-titulo').innerText = "⏳ Comprovante em Análise";
                         document.getElementById('texto-alerta-desc').innerText = "Seu comprovante foi enviado com sucesso. Aguarde a validação do administrador.";
                         document.getElementById('grid-vitrine-vendas').innerHTML = "";
                     } else {
-                        // Oculta caixa de pix genérica caso tenha vitrine rodando
                         document.getElementById('caixa-pix-geral-backup').style.display = "none";
                         povoarVitrineDeVendasCliente(dados.jogos_liberados || {});
                     }
@@ -169,7 +168,6 @@ auth.onAuthStateChanged(user => {
     }
 });
 
-// MOTOR DA VITRINE DE PATCHES À VENDA
 function povoarVitrineDeVendasCliente(jogosLiberadosUsuario) {
     const areaPendente = document.getElementById('area-compra-pendente');
     const containerVitrine = document.getElementById('grid-vitrine-vendas');
@@ -269,7 +267,7 @@ document.getElementById('form-editar-perfil-cliente').addEventListener('submit',
         await database.ref(`usuarios/${usuarioLogadoUid}/nome`).set(nome);
         await database.ref(`usuarios/${usuarioLogadoUid}/sobrenome`).set(sobrenome);
         await database.ref(`usuarios/${usuarioLogadoUid}/whatsapp`).set(whatsapp);
-        alert("🚀 Perfil updated com sucesso!");
+        alert("🚀 Perfil atualizado com sucesso!");
         modalEditarPerfil.classList.remove('active');
     } catch(err) { alert("Erro ao atualizar: " + err.message); }
 });
@@ -393,7 +391,7 @@ function ouvirCardsDoCliente(uid) {
                 <h4>Analisando Comprovante...</h4>
             `;
             cardElement.addEventListener('click', () => {
-                alert("🎮 SEU ACESSO ESTÁ SE NDO ANALISADO!\n\nRecebemos o seu comprovante PIX com sucesso. Nossa equipe está validando o pagamento para injetar o seu Card de jogo aqui no painel.");
+                alert("🎮 SEU ACESSO ESTÁ SENDO ANALISADO!\n\nRecebemos o seu comprovante PIX com sucesso. Nossa equipe está validando o pagamento para injetar o seu Card de jogo aqui no painel.");
             });
             gridCardsCliente.appendChild(cardElement);
             return;
@@ -430,7 +428,6 @@ function abrirModalJogo(card, modoLojaVenda = false, cardId = "") {
     const containerDownloads = document.getElementById('modal-jogo-botoes');
     const btnAdquirirLoja = document.getElementById('btn-adquirir-patch-vitrine');
     
-    // Elementos da Chave Pix do Bloco de Preview
     const blocoPixPreview = document.getElementById('bloco-pix-dinamico-preview');
     const txtPixPreviewReal = document.getElementById('texto-pix-dinamico-preview-real');
     const btnCopiarPixPreview = document.getElementById('btn-copiar-pix-preview-dinamico');
@@ -446,7 +443,6 @@ function abrirModalJogo(card, modoLojaVenda = false, cardId = "") {
     const pixFinalCard = card.pix || "88988470190";
 
     if (modoLojaVenda) {
-        // Alimenta e exibe bloco de cópia rápida do PIX dinâmico do Card
         txtPixPreviewReal.innerText = pixFinalCard;
         blocoPixPreview.style.display = "block";
         btnCopiarPixPreview.onclick = () => { executarCopiaGamerBlindada(pixFinalCard, btnCopiarPixPreview); };
@@ -459,7 +455,6 @@ function abrirModalJogo(card, modoLojaVenda = false, cardId = "") {
             document.getElementById('id-card-escolhido-compra').value = cardId;
             document.getElementById('titulo-envio-comprovante-dinamico').innerText = `Adquirir: ${card.titulo}`;
             
-            // Injeta dados dinâmicos do Card no formulário de checkout final
             document.getElementById('texto-preco-modal-checkout').innerText = precoFinalCard;
             document.getElementById('texto-chave-pix-checkout').innerText = pixFinalCard;
             
@@ -612,7 +607,6 @@ function adicionarLinhaSubcategoriaVisual(blocoId, txtLink = "", urlLink = "") {
     containerRows.appendChild(divRow);
 }
 
-// SALVAR VISUAL DO MENU
 document.getElementById('btn-salvar-visual-menu').addEventListener('click', async () => {
     const blocos = document.querySelectorAll('.bloco-categoria-visual');
     const estruturaMenuFinal = []; let dadosValidos = true;
@@ -645,7 +639,7 @@ function removerBlocoCategoriaVisual(blocoId) {
 }
 
 // ==========================================================================
-// CONTROLE DE CARDS DE JOGOS (ADMIN) - MODIFICADO COM PREÇO E PIX
+// CONTROLE DE CARDS DE JOGOS (ADMIN)
 // ==========================================================================
 document.getElementById('form-criar-card').addEventListener('submit', async (e) => {
     e.preventDefault(); const idEdicao = document.getElementById('card-id-edicao').value;
@@ -733,9 +727,6 @@ document.getElementById('btn-exportar-cards').addEventListener('click', () => {
     });
 });
 
-// ==========================================================================
-// PAINEL ADMINISTRATIVO: MOTOR DO SISTEMA QUALIFICADO DE 3 ABAS HISTÓRICAS
-// ==========================================================================
 function inicializarPainelAdmin() {
     database.ref('cards_disponiveis').once('value', snapshotCards => {
         const cacheCardsGlobais = snapshotCards.val() || {};
