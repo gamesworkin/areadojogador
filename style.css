@@ -234,7 +234,7 @@ body {
 }
 
 .conteudo-expansivel.aberto {
-    max-height: 3000px; /* Permite expansão total de múltiplos cards */
+    max-height: 3000px; 
     opacity: 1;
     padding: 15px 20px 25px 20px;
 }
@@ -354,7 +354,7 @@ body {
 }
 
 /* ==========================================================================
-   MODAL FLUTUANTE DE DETALHES (MOBILE COMPATIBLE - FOTO 1000377257.jpg)
+   MODAL FLUTUANTE DE DETALHES
    ========================================================================== */
 #modal-details-container-gamer {
     display: none;
@@ -456,7 +456,6 @@ body {
     color: #ffffff;
 }
 
-/* Formulários Internos das Modais */
 #modal-editar-perfil input {
     width: 100%;
     background-color: #0b0e14;
@@ -473,7 +472,6 @@ body {
     border-color: #00ff66;
 }
 
-/* Área de Drop e Upload de Comprovante */
 .instrucao {
     font-size: 0.9rem;
     color: #8899a6;
@@ -493,7 +491,7 @@ body {
 }
 
 .drop-zone:hover {
-    border-color: #00ff66;
+    border: 2px dashed #00ff66;
     background-color: rgba(0, 255, 102, 0.02);
 }
 
@@ -576,7 +574,6 @@ body {
     gap: 10px;
 }
 
-/* Lista Dinâmica de Cadastros e Comprovantes no Admin */
 .lista-usuarios {
     display: flex;
     flex-direction: column;
@@ -671,7 +668,6 @@ body {
     background-color: #242f41;
 }
 
-/* Construtor Visual do Menu no Admin */
 .admin-menu-json-box {
     margin-top: 25px;
     background: #0b0e14;
@@ -709,7 +705,7 @@ body {
 }
 
 /* ==========================================================================
-   REGRAS RESPONSIVAS E CORREÇÕES CRUCIAL DE LAYOUT (FOTO 1000377257.jpg)
+   REGRAS RESPONSIVAS E CORREÇÃO DO LAYOUT MOBILE (FOTO 1000377257.jpg)
    ========================================================================== */
 @media (max-width: 900px) {
     .admin-grid {
@@ -725,7 +721,7 @@ body {
         margin: 15px auto;
     }
     
-    /* Configuração de 3 Cards por linha Mosaico Perfeito no Celular */
+    /* CORREÇÃO DO SELETOR: Mudado de .grid-template-columns para .grid-cards */
     .grid-cards {
         grid-template-columns: repeat(3, 1fr) !important;
         gap: 8px !important;
@@ -756,16 +752,16 @@ body {
         right: 5px !important;
     }
 
-    /* CORREÇÃO DO PREVIEW QUE VAZAVA A TELA INFERIOR DO CELULAR */
+    /* CORREÇÃO DO PREVIEW FLUTUANTE EM CELULARES */
     .modal-jogos .modal-content {
-        max-height: 85vh !important; /* Trava a altura máxima na tela */
+        max-height: 85vh !important;
         display: flex !important;
         flex-direction: column !important;
-        overflow-y: auto !important; /* Cria scroll se necessário */
+        overflow-y: auto !important;
     }
 
     .modal-jogos .modal-content > div[style*="display:flex"] {
-        flex-direction: column !important; /* Colunas viram linhas no celular */
+        flex-direction: column !important;
     }
 
     .modal-jogos [style*="flex:1 1 280px"] {
@@ -794,7 +790,7 @@ body {
 
     .modal-jogos #modal-jogo-descricao {
         font-size: 0.8rem !important;
-        max-height: 90px !important; /* Limita texto e cria rolagem interna */
+        max-height: 90px !important;
         overflow-y: auto !important;
         margin-bottom: 12px !important;
     }
@@ -806,7 +802,6 @@ body {
     }
 }
 
-/* Botão Flutuante Fixado do WhatsApp */
 .whatsapp-btn-float:hover {
     transform: scale(1.1);
 }
