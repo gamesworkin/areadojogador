@@ -9,7 +9,7 @@
             --bg-principal: #0b0e14;
             --bg-card: #121824;
             --bg-input: #1c2434;
-            --accent-gamer: #ffaa00;
+            --accent-gamer: #00ff66; /* Voltou para o Verde Original */
             --accent-sucesso: #00ff66;
             --accent-perigo: #ff3333;
             --texto-principal: #ffffff;
@@ -38,7 +38,7 @@
         input:focus, textarea:focus, select:focus { outline: none; border-color: var(--accent-gamer); }
         input:disabled { background: #131924; color: #667788; cursor: not-allowed; border-color: #1c2536; }
 
-        .btn-gamer { width: 100%; padding: 14px; background: linear-gradient(135deg, #ffaa00 0%, #cc8800 100%); border: none; border-radius: 4px; color: #000; font-weight: bold; font-size: 1rem; cursor: pointer; text-transform: uppercase; letter-spacing: 1px; transition: transform 0.1s, opacity 0.2s; }
+        .btn-gamer { width: 100%; padding: 14px; background: linear-gradient(135deg, #00ff66 0%, #00aa44 100%); border: none; border-radius: 4px; color: #000; font-weight: bold; font-size: 1rem; cursor: pointer; text-transform: uppercase; letter-spacing: 1px; transition: transform 0.1s, opacity 0.2s; }
         .btn-gamer:hover { opacity: 0.9; }
         .btn-gamer:active { transform: scale(0.98); }
         .btn-nova-compra { background: linear-gradient(135deg, #00ff66 0%, #00aa44 100%) !important; color: #000 !important; }
@@ -57,7 +57,7 @@
         .nav-horizontal-list { list-style: none; display: flex; flex-wrap: wrap; }
         .nav-dinamica-item { position: relative; }
         .nav-dinamica-link { display: block; padding: 15px 20px; color: #fff; text-decoration: none; font-weight: bold; font-size: 0.9rem; cursor: pointer; transition: background 0.2s; }
-        .nav-dinamica-link:hover { background: rgba(255,170,0,0.05); color: var(--accent-gamer); }
+        .nav-dinamica-link:hover { background: rgba(0,255,102,0.05); color: var(--accent-gamer); }
         
         /* Submenu */
         .submenu-dinamico { display: none; position: absolute; top: 100%; left: 0; background: #121824; border: 1px solid var(--borda-card); list-style: none; min-width: 200px; z-index: 100; border-radius: 0 0 4px 4px; box-shadow: 0 8px 16px rgba(0,0,0,0.4); }
@@ -377,8 +377,8 @@
                         <button id="tab-solic-cadastrados" class="admin-tab-link">👥 Base Cadastrados</button>
                     </div>
 
-                    <div id="container-reset-pre-venda" style="display:none; margin-bottom:15px; padding:12px; background:#1b1524; border:1px dashed #9900ff; border-radius:6px;">
-                        <button id="btn-reset-geral-temporada" class="btn-gamer" style="background: linear-gradient(135deg, #9900ff 0%, #6600cc 100%); color:#fff; font-size:0.85rem; padding:10px;">📦 ARQUIVAR APROVADOS DA TEMPORADA (FECHAR PRÉ-VENDA)</button>
+                    <div id="container-reset-pre-venda" style="display:none; margin-bottom:15px; padding:12px; background:#1b1524; border:1px dashed #00ff66; border-radius:6px;">
+                        <button id="btn-reset-geral-temporada" class="btn-gamer" style="background: linear-gradient(135deg, #00ff66 0%, #00aa44 100%); color:#000; font-size:0.85rem; padding:10px;">📦 ARQUIVAR APROVADOS DA TEMPORADA (FECHAR PRÉ-VENDA)</button>
                     </div>
 
                     <div id="lista-usuarios-admin"></div>
