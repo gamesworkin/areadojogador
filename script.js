@@ -1,5 +1,5 @@
 // ==========================================================================
-// CONFIGURAÇÃO DO FIREBASE (COMPLETA E RESTAURADA)
+// CONFIGURAÇÃO DO FIREBASE (Substitua pelos dados do seu Console Firebase)
 // ==========================================================================
 const firebaseConfig = {
     apiKey: "AIzaSyBu7DKMzV-LwEKcnDYK7Y-1q9pNSCHE7jE",
@@ -11,824 +11,947 @@ const firebaseConfig = {
     appId: "1:113812783935:web:2b1229abdd35be7b73898a"
 };
 
-// Inicializa o Firebase se não estiver inicializado
-if (!firebase.apps.length) {
-    firebase.initializeApp(firebaseConfig);
-}
-
+firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
-const db = firebase.database();
+const database = firebase.database();
 
-// Variáveis Globais de Controle de Fluxo Geral
-let todosOsCards = {};
+const GOOGLE_WEB_APP_URL = "COLE_AQUI_O_LINK_DO_APP_DA_WEB_DO_GOOGLE";
+
+// Elementos HTML
+const viewAuth = document.getElementById('view-auth');
+const viewCliente = document.getElementById('view-cliente');
+const viewClienteBloqueado = document.getElementById('view-cliente-bloqueado');
+const viewAdmin = document.getElementById('view-admin');
+const modalFormEnvio = document.getElementById('modal-formulario-envio');
+const modalDetalhesJogo = document.getElementById('modal-detalhes-jogo');
+const modalEditarPerfil = document.getElementById('modal-editar-perfil');
+const gridCardsCliente = document.getElementById('grid-cards-cliente');
+const listaUsuariosAdmin = document.getElementById('lista-usuarios-admin');
+const listaCardsCriados = document.getElementById('lista-cards-criados');
+const inputWhatsApp = document.getElementById('cad-whatsapp');
+const perfWhatsApp = document.getElementById('perf-whatsapp');
+
 let usuarioLogadoUid = null;
-let informacoesUsuarioLogado = {};
-let solicitacoesGeraisDoBanco = {};
-let abaSolicitacoesAtivaAdmin = "pendentes";
+let dadosClienteAtual = {};
+let filtroAdminAtual = "pendentes";
 
-// Estrutura em Memória para Construtor Visual do Menu Horizontal
-let estruturaLayoutMenuVisual = [];
+// Máscaras Dinâmicas para WhatsApp (Cadastro e Perfil)
+function aplicarMascaraWhats(elemento) {
+    let value = elemento.value.replace(/\D/g, "");
+    if (value.length > 11) value = value.slice(0, 11);
+    if (value.length > 6) { value = `(${value.slice(0, 2)}) ${value.slice(2, 7)}-${value.slice(7)}`; }
+    else if (value.length > 2) { value = `(${value.slice(0, 2)}) ${value.slice(2)}`; }
+    else if (value.length > 0) { value = `(${value}`; }
+    elemento.value = value;
+}
+inputWhatsApp.addEventListener('input', (e) => aplicarMascaraWhats(e.target));
+perfWhatsApp.addEventListener('input', (e) => aplicarMascaraWhats(e.target));
 
-// Inicialização e Vinculação de Eventos Globais do Sistema
-document.addEventListener("DOMContentLoaded", () => {
-    configurarAbasAutenticacao();
-    configurarFormulariosAutenticacao();
-    configurarPerfilCliente();
-    configurarUploadComprovante();
-    configurarAbasPainelAdmin();
-    configurarFormularioCadastroCards();
-
-    // Eventos do Modal de Detalhes
-    const btnRevelarSenha = document.getElementById("btn-revelar-senha-modal");
-    if(btnRevelarSenha) {
-        btnRevelarSenha.addEventListener("click", () => {
-            btnRevelarSenha.style.display = "none";
-            document.getElementById("area-texto-senha-secreta").style.display = "block";
-        });
+// Criptografia Simples Visual de Senha em Tela
+const loginShadowPass = document.getElementById('login-shadow-pass');
+const loginSenhaReal = document.getElementById('login-senha');
+loginShadowPass.addEventListener('input', (e) => {
+    const val = e.target.value;
+    if (val.length < loginSenhaReal.value.length) {
+        loginSenhaReal.value = loginSenhaReal.value.slice(0, val.length);
+    } else if (val.length > loginSenhaReal.value.length) {
+        const charAdicionado = val.slice(-1);
+        if (charAdicionado !== "•") loginSenhaReal.value += charAdicionado;
     }
-
-    // Botões auxiliares do painel Admin
-    const btnCancel = document.getElementById("btn-cancelar-edicao");
-    if(btnCancel) {
-        btnCancel.addEventListener("click", () => limparFormularioCardAdmin());
-    }
-    const btnExport = document.getElementById("btn-exportar-cards");
-    if(btnExport) {
-        btnExport.addEventListener("click", () => exportarCardsParaJSON());
-    }
-    const btnSaveMenu = document.getElementById("btn-salvar-visual-menu");
-    if(btnSaveMenu) {
-        btnSaveMenu.addEventListener("click", () => salvarLayoutMenuNoFirebase());
-    }
-    const btnResetTemporada = document.getElementById("btn-reset-geral-temporada");
-    if(btnResetTemporada) {
-        btnResetTemporada.addEventListener("click", () => executarResetGeralTemporadaPreVenda());
-    }
-
-    // Ouvinte em tempo real de Mudança do Estado da Autenticação do Usuário
-    auth.onAuthStateChanged(user => {
-        if (user) {
-            usuarioLogadoUid = user.uid;
-            escutarDadosDoUsuario();
-        } else {
-            usuarioLogadoUid = null;
-            informacoesUsuarioLogado = {};
-            alternarTelasVisiveis("view-auth");
-        }
-    });
-
-    // RETORNOU: Escuta ativa de Cards Cadastrados no caminho correto "cards_disponiveis"
-    db.ref("cards_disponiveis").on("value", snapshot => {
-        todosOsCards = snapshot.val() || {};
-        processarEPresentarDados();
-        if (usuarioLogadoUid && informacoesUsuarioLogado.regra === "admin") {
-            renderizarPainelControleAdmin();
-        }
-    });
-
-    // Escuta ativa de Pedidos/Inscrições Gerais para Sincronização Instantânea
-    db.ref("solicitacoes_comprovantes").on("value", snapshot => {
-        solicitacoesGeraisDoBanco = snapshot.val() || {};
-        processarEPresentarDados();
-        if (usuarioLogadoUid && informacoesUsuarioLogado.regra === "admin") {
-            renderizarPainelControleAdmin();
-        }
-    });
-
-    // Escuta ativa do Layout do Menu Horizontal Suspenso
-    db.ref("configuracao_menu_horizontal").on("value", snapshot => {
-        const dadosMenu = snapshot.val() || [];
-        estruturaLayoutMenuVisual = dadosMenu;
-        renderizarMenuHorizontalCliente(dadosMenu);
-        if (usuarioLogadoUid && informacoesUsuarioLogado.regra === "admin") {
-            renderizarConstrutorVisualMenuAdmin();
-        }
-    });
+    loginShadowPass.value = "•".repeat(loginSenhaReal.value.length);
 });
 
-// Alternar entre Telas/Views principais do app
-function alternarTelasVisiveis(idDaViewAlvo) {
-    document.querySelectorAll(".view").forEach(v => v.classList.remove("active"));
-    const viewAlvo = document.getElementById(idDaViewAlvo);
-    if (viewAlvo) viewAlvo.classList.add("active");
+function validarProvedorEmail(email) {
+    const emailLimpo = email.trim().toLowerCase();
+    if (emailLimpo === "teste@teste.com") return true;
+    const provedoresValidos = ["gmail.com", "hotmail.com", "outlook.com", "outlook.com.br", "yahoo.com", "yahoo.com.br", "icloud.com", "live.com", "uol.com.br", "terra.com.br", "bol.com.br"];
+    const dominio = emailLimpo.split('@')[1];
+    return provedoresValidos.includes(dominio);
 }
 
-// Configura Abas Login / Cadastro da Autenticação
-function configurarAbasAutenticacao() {
-    const btnLogin = document.getElementById("tab-login");
-    const btnCadastro = document.getElementById("tab-cadastro");
-    const formLogin = document.getElementById("form-login");
-    const formCadastro = document.getElementById("form-cadastro-auth");
-
-    if(btnLogin && btnCadastro) {
-        btnLogin.addEventListener("click", () => {
-            btnLogin.classList.add("active");
-            btnCadastro.classList.remove("active");
-            formLogin.classList.add("active");
-            formCadastro.classList.remove("active");
-        });
-        btnCadastro.addEventListener("click", () => {
-            btnCadastro.classList.add("active");
-            btnLogin.classList.remove("active");
-            formCadastro.classList.add("active");
-            formLogin.classList.remove("active");
-        });
-    }
+function irParaTela(tela) {
+    viewAuth.classList.remove('active');
+    viewCliente.classList.remove('active');
+    viewClienteBloqueado.classList.remove('active');
+    viewAdmin.classList.remove('active');
+    tela.classList.add('active');
 }
 
-// Lógica de Autenticação Completa (Login, Cadastro e Sincronização do Shadow Password)
-function configurarFormulariosAutenticacao() {
-    const shadowPass = document.getElementById("login-shadow-pass");
-    const realPass = document.getElementById("login-senha");
+// Chaves de Abas Login/Cadastro
+document.getElementById('tab-login').addEventListener('click', () => {
+    document.getElementById('form-login').classList.add('active');
+    document.getElementById('form-cadastro-auth').classList.remove('active');
+    document.getElementById('tab-login').classList.add('active');
+    document.getElementById('tab-cadastro').classList.remove('active');
+});
+document.getElementById('tab-cadastro').addEventListener('click', () => {
+    document.getElementById('form-cadastro-auth').classList.add('active');
+    document.getElementById('form-login').classList.remove('active');
+    document.getElementById('tab-cadastro').classList.add('active');
+    document.getElementById('tab-login').classList.remove('active');
+});
 
-    if (shadowPass && realPass) {
-        shadowPass.addEventListener("input", (e) => {
-            realPass.value = e.target.value;
-        });
-    }
+// Configuração das 3 Abas do Admin
+document.getElementById('tab-solic-pendentes').addEventListener('click', () => {
+    filtroAdminAtual = "pendentes";
+    document.getElementById('tab-solic-pendentes').classList.add('active');
+    document.getElementById('tab-solic-concluidos').classList.remove('active');
+    document.getElementById('tab-solic-cadastrados').classList.remove('active');
+    document.getElementById('container-reset-pre-venda').style.display = "none";
+    inicializarPainelAdmin();
+});
+document.getElementById('tab-solic-concluidos').addEventListener('click', () => {
+    filtroAdminAtual = "concluidos";
+    document.getElementById('tab-solic-concluidos').classList.add('active');
+    document.getElementById('tab-solic-pendentes').classList.remove('active');
+    document.getElementById('tab-solic-cadastrados').classList.remove('active');
+    document.getElementById('container-reset-pre-venda').style.display = "block";
+    inicializarPainelAdmin();
+});
+document.getElementById('tab-solic-cadastrados').addEventListener('click', () => {
+    filtroAdminAtual = "cadastrados";
+    document.getElementById('tab-solic-cadastrados').classList.add('active');
+    document.getElementById('tab-solic-pendentes').classList.remove('active');
+    document.getElementById('tab-solic-concluidos').classList.remove('active');
+    document.getElementById('container-reset-pre-venda').style.display = "none";
+    inicializarPainelAdmin();
+});
 
-    // Formulário de Login
-    document.getElementById("form-login").addEventListener("submit", e => {
-        e.preventDefault();
-        const email = document.getElementById("login-email").value.trim();
-        const senha = realPass.value;
-
-        auth.signInWithEmailAndPassword(email, senha)
-            .catch(err => alert("Erro ao efetuar login: " + err.message));
-    });
-
-    // Formulário de Cadastro
-    document.getElementById("form-cadastro-auth").addEventListener("submit", e => {
-        e.preventDefault();
-        const nome = document.getElementById("cad-nome").value.trim();
-        const sobrenome = document.getElementById("cad-sobrenome").value.trim();
-        const whatsapp = document.getElementById("cad-whatsapp").value.trim();
-        const email = document.getElementById("cad-email").value.trim();
-        const senha = document.getElementById("cad-senha").value;
-
-        auth.createUserWithEmailAndPassword(email, senha)
-            .then(cred => {
-                return db.ref("usuarios/" + cred.user.uid).set({
-                    uid: cred.user.uid,
-                    nome: nome,
-                    sobrenome: sobrenome,
-                    whatsapp: whatsapp,
-                    email: email,
-                    regra: "cliente",
-                    status: "ativo"
-                });
-            })
-            .catch(err => alert("Erro ao realizar cadastro: " + err.message));
-    });
-
-    // Botão Esqueci Minha Senha
-    const btnEsqueci = document.getElementById("btn-esqueci-senha");
-    if(btnEsqueci) {
-        btnEsqueci.addEventListener("click", () => {
-            const email = document.getElementById("login-email").value.trim();
-            if(!email) {
-                alert("Por favor, digite o seu e-mail no campo correspondente para podermos enviar o link de redefinição.");
-                return;
-            }
-            auth.sendPasswordResetEmail(email)
-                .then(() => alert("Um e-mail de redefinição de senha foi enviado para: " + email + ". Verifique sua caixa de entrada ou spam."))
-                .catch(err => alert("Erro ao processar solicitação: " + err.message));
-        });
-    }
-}
-
-// Escuta ativa de dados cadastrais da conta logada no banco
-function escutarDadosDoUsuario() {
-    db.ref("usuarios/" + usuarioLogadoUid).on("value", snapshot => {
-        informacoesUsuarioLogado = snapshot.val() || {};
-        
-        if (informacoesUsuarioLogado.status === "excluido") {
-            alternarTelasVisiveis("view-cliente-bloqueado");
-            return;
-        }
-
-        const nomeDisplay = document.getElementById("user-display-name");
-        if(nomeDisplay) nomeDisplay.innerText = `${informacoesUsuarioLogado.nome || ""} ${informacoesUsuarioLogado.sobrenome || ""}`;
-
-        // Redireciona o usuário para a View correspondente ao seu nível de acesso
-        if (informacoesUsuarioLogado.regra === "admin") {
-            alternarTelasVisiveis("view-admin");
-            renderizarPainelControleAdmin();
+// ==========================================================================
+// MONITOR DE SESSÃO COM SEGURANÇA ADAPTADA E GERENCIADOR DE EXCLUSÃO
+// ==========================================================================
+auth.onAuthStateChanged(user => {
+    if (user) {
+        usuarioLogadoUid = user.uid;
+        if (user.email === "admin@admin.com") {
+            irParaTela(viewAdmin);
+            inicializarPainelAdmin();
+            ouvirCardsGlobaisAdmin();
+            ouvirEPovoarMenuVisualAdmin(); 
         } else {
-            alternarTelasVisiveis("view-cliente");
-            processarEPresentarDados();
-        }
-    });
-}
+            database.ref('usuarios/' + user.uid).on('value', async snapshot => {
+                const dados = snapshot.val();
+                if (dados) {
+                    dadosClienteAtual = dados;
 
-// Processa cruzamento de dados de liberação de patchs do cliente logado
-function processarEPresentarDados() {
-    if (!usuarioLogadoUid || informacoesUsuarioLogado.regra === "admin") return;
+                    if (dados.status_cadastro === "solicitou_exclusao") {
+                        irParaTela(viewClienteBloqueado);
+                        return;
+                    }
 
-    let jogosAdquiridosIds = [];
-    let jogosEmAnaliseIds = [];
+                    document.getElementById('user-display-name').innerText = `${dados.nome} ${dados.sobrenome}`;
+                    
+                    const areaPendente = document.getElementById('area-compra-pendente');
 
-    Object.keys(solicitacoesGeraisDoBanco).forEach(key => {
-        const sol = solicitacoesGeraisDoBanco[key];
-        if (sol.usuarioUid === usuarioLogadoUid) {
-            if (sol.statusSolicitacao === "aprovado") {
-                jogosAdquiridosIds.push(sol.cardId);
-            } else if (sol.statusSolicitacao === "pendente") {
-                jogosEmAnaliseIds.push(sol.cardId);
-            }
-        }
-    });
-
-    atualizarPainelCliente(jogosAdquiridosIds, jogosEmAnaliseIds);
-}
-
-// RENDERIZAÇÃO ESTÁVEL DA INTERFACE DO CLIENTE
-function atualizarPainelCliente(jogosAdquiridosIds, jogosEmAnaliseIds) {
-    const gridLiberados = document.getElementById("grid-cards-cliente");
-    const gridVitrine = document.getElementById("grid-vitrine-vendas");
-    const areaCompraPendente = document.getElementById("area-compra-pendente");
-
-    if (!gridLiberados || !gridVitrine) return;
-
-    gridLiberados.innerHTML = "";
-    gridVitrine.innerHTML = "";
-
-    let contemPatchesParaComprar = false;
-
-    Object.keys(todosOsCards).forEach(id => {
-        const card = todosOsCards[id];
-
-        if (jogosAdquiridosIds.includes(id)) {
-            const divGamer = document.createElement("div");
-            divGamer.className = "game-card";
-            divGamer.onclick = () => abrirModalDetalhesJogo(id, true);
-            divGamer.innerHTML = `
-                <img src="${card.capa_url || card.capa}" alt="${card.titulo}">
-                <h4>${card.titulo}</h4>
-            `;
-            gridLiberados.appendChild(divGamer);
-        } else {
-            contemPatchesParaComprar = true;
-            
-            const divVitrine = document.createElement("div");
-            divVitrine.className = "game-card";
-            divVitrine.onclick = () => abrirModalDetalhesJogo(id, false);
-            divVitrine.innerHTML = `
-                <div style="position:absolute; top:10px; right:10px; background:#00ff66; color:#000; font-weight:bold; padding:4px 8px; font-size:0.75rem; border-radius:4px; z-index:2;">${card.preco || "R$ 10,00"}</div>
-                <img src="${card.capa_url || card.capa}" alt="${card.titulo}">
-                <h4>${card.titulo}</h4>
-            `;
-            gridVitrine.appendChild(divVitrine);
-        }
-    });
-
-    areaCompraPendente.style.display = contemPatchesParaComprar ? "block" : "none";
-}
-
-// Janela Modal Dinâmica de Detalhes do Jogo Selecionado
-function abrirModalDetalhesJogo(cardId, jaAdquirido) {
-    const card = todosOsCards[cardId];
-    if (!card) return;
-
-    document.getElementById("modal-jogo-titulo").innerText = card.titulo;
-    document.getElementById("modal-jogo-capa").src = card.capa_url || card.capa;
-    document.getElementById("modal-jogo-descricao").innerText = card.descricao;
-
-    const containerSenha = document.getElementById("container-senha-protegida-modal");
-    const areaBotoes = document.getElementById("modal-jogo-botoes");
-    const btnAdquirir = document.getElementById("btn-adquirir-patch-vitrine");
-    const blocoPixPreview = document.getElementById("bloco-pix-dinamico-preview");
-
-    areaBotoes.innerHTML = "";
-    document.getElementById("area-texto-senha-secreta").style.display = "none";
-    document.getElementById("btn-revelar-senha-modal").style.display = "block";
-
-    if (jaAdquirido) {
-        btnAdquirir.style.display = "none";
-        blocoPixPreview.style.display = "none";
-
-        if (card.senha_patch || card.senhaPatch) {
-            containerSenha.style.display = "block";
-            document.getElementById("texto-senha-secreta-real").innerText = card.senha_patch || card.senhaPatch;
-            document.getElementById("btn-copiar-senha-modal").onclick = () => {
-                navigator.clipboard.writeText(card.senha_patch || card.senhaPatch);
-                alert("Senha do patch copiada com sucesso!");
-            };
-        } else {
-            containerSenha.style.display = "none";
-        }
-
-        for (let i = 1; i <= 4; i++) {
-            const txt = card[`btnTxt${i}`] || card[`btn_txt_${i}`];
-            const url = card[`btnUrl${i}`] || card[`btn_url_${i}`];
-            if (txt && url) {
-                const a = document.createElement("a");
-                a.href = url;
-                a.target = "_blank";
-                a.className = "btn-download-dinamico";
-                a.style.textAlign = "center";
-                a.style.display = "block";
-                a.innerText = txt;
-                areaBotoes.appendChild(a);
-            }
+                    if (dados.status_cadastro === "comprovante_enviado") {
+                        areaPendente.style.display = "block";
+                        document.getElementById('caixa-pix-geral-backup').style.display = "none";
+                        document.getElementById('texto-alerta-titulo').innerText = "⏳ Comprovante em Análise";
+                        document.getElementById('texto-alerta-desc').innerText = "Seu comprovante foi enviado com sucesso. Aguarde a validação do administrador.";
+                        document.getElementById('grid-vitrine-vendas').innerHTML = "";
+                    } else {
+                        document.getElementById('caixa-pix-geral-backup').style.display = "none";
+                        povoarVitrineDeVendasCliente(dados.jogos_liberados || {});
+                    }
+                    
+                    irParaTela(viewCliente);
+                    ouvirCardsDoCliente(user.uid);
+                    ouvirEConstruirMenuCliente(); 
+                    inicializarBotaoWhatsApp();
+                    configurarCopiaPixPainel(); 
+                }
+            });
         }
     } else {
-        containerSenha.style.display = "none";
-        areaBotoes.innerHTML = "";
-        btnAdquirir.style.display = "block";
+        usuarioLogadoUid = null;
+        irParaTela(viewAuth);
+    }
+});
+
+function povoarVitrineDeVendasCliente(jogosLiberadosUsuario) {
+    const areaPendente = document.getElementById('area-compra-pendente');
+    const containerVitrine = document.getElementById('grid-vitrine-vendas');
+    
+    database.ref('cards_disponiveis').once('value', snapshot => {
+        const cardsGlobais = snapshot.val();
+        if (!cardsGlobais) { areaPendente.style.display = "none"; return; }
         
-        document.getElementById("texto-preco-botao-dinamico").innerText = card.preco || "R$ 10,00";
+        containerVitrine.innerHTML = "";
+        let totalDisponiveisVenda = 0;
 
-        if (card.pix) {
-            blocoPixPreview.style.display = "block";
-            document.getElementById("texto-pix-dinamico-preview-real").innerText = card.pix;
-            document.getElementById("btn-copiar-pix-preview-dinamico").onclick = (e) => {
-                e.stopPropagation();
-                navigator.clipboard.writeText(card.pix);
-                alert("Chave PIX do Patch copiada com sucesso!");
-            };
+        Object.keys(cardsGlobais).forEach(cardId => {
+            if (!jogosLiberadosUsuario[cardId]) {
+                totalDisponiveisVenda++;
+                const cardVitrine = document.createElement('div');
+                cardVitrine.className = 'game-card';
+                cardVitrine.style.border = "1px dashed #242f41";
+                
+                const precoExibicao = cardsGlobais[cardId].preco || "R$ 10,00";
+                
+                cardVitrine.innerHTML = `
+                    <img src="${cardsGlobais[cardId].capa_url}" style="opacity: 0.65;">
+                    <h4 style="color:#aaa;">[Disponível] ${cardsGlobais[cardId].titulo}</h4>
+                    <div style="position:absolute; top:10px; right:10px; background:#00ff66; color:#000; font-size:0.7rem; font-weight:bold; padding:3px 6px; border-radius:3px;">${precoExibicao}</div>
+                `;
+                cardVitrine.onclick = () => abrirModalJogo(cardsGlobais[cardId], true, cardId);
+                containerVitrine.appendChild(cardVitrine);
+            }
+        });
+
+        if (totalDisponiveisVenda > 0) {
+            areaPendente.style.display = "block";
+            document.getElementById('texto-alerta-titulo').innerText = "🛒 Patches Disponíveis para Adquirir";
+            document.getElementById('texto-alerta-desc').innerText = "Selecione um patch acima para ver detalhes e enviar o comprovante.";
         } else {
-            blocoPixPreview.style.display = "none";
+            areaPendente.style.display = "none";
         }
+    });
+}
 
-        btnAdquirir.onclick = () => {
-            fecharModalJogo();
-            abrirCheckoutFormularioCompra(cardId);
+function deslogar() { auth.signOut().then(() => location.reload()); }
+
+function executarCopiaGamerBlindada(textoParaCopiar, elementoBotao) {
+    const textoOriginal = elementoBotao.innerHTML;
+    if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(textoParaCopiar).then(() => {
+            elementoBotao.innerHTML = "✅ Copiado";
+            setTimeout(() => { elementoBotao.innerHTML = textoOriginal; }, 2000);
+        }).catch(() => executarMetodoCopiaAntigo(textoParaCopiar, elementoBotao, textoOriginal));
+    } else {
+        executarMetodoCopiaAntigo(textoParaCopiar, elementoBotao, textoOriginal);
+    }
+}
+
+function executarMetodoCopiaAntigo(texto, botao, textoOrig) {
+    const textarea = document.createElement("textarea");
+    textarea.value = texto;
+    textarea.style.position = "fixed"; textarea.style.opacity = "0";
+    document.body.appendChild(textarea);
+    textarea.select();
+    try { document.execCommand("copy"); botao.innerHTML = "✅ Copiado"; } catch (err) {}
+    document.body.removeChild(textarea);
+    setTimeout(() => { botao.innerHTML = textoOrig; }, 2000);
+}
+
+function configurarCopiaPixPainel() {
+    const btnCopiarPix = document.getElementById('btn-copiar-pix-painel');
+    if (btnCopiarPix) {
+        btnCopiarPix.onclick = () => {
+            const chaveTexto = document.getElementById('valor-chave-pix').innerText;
+            executarCopiaGamerBlindada(chaveTexto, btnCopiarPix);
         };
     }
-
-    document.getElementById("modal-details-container-gamer").style.display = "block";
 }
 
-function fecharModalJogo() {
-    document.getElementById("modal-details-container-gamer").style.display = "none";
-}
+// ==========================================================================
+// CONTROLE DO MENU EDITAR PERFIL DO CLIENTE + EXCLUSÃO
+// ==========================================================================
+document.getElementById('btn-abrir-perfil').addEventListener('click', () => {
+    document.getElementById('perf-email').value = dadosClienteAtual.email;
+    document.getElementById('perf-nome').value = dadosClienteAtual.nome;
+    document.getElementById('perf-sobrenome').value = dadosClienteAtual.sobrenome;
+    document.getElementById('perf-whatsapp').value = dadosClienteAtual.whatsapp || "";
+    aplicarMascaraWhats(document.getElementById('perf-whatsapp'));
+    modalEditarPerfil.classList.add('active');
+});
 
-// Checkout de Inscrição
-function abrirCheckoutFormularioCompra(cardId) {
-    const card = todosOsCards[cardId];
-    if (!card) return;
+document.getElementById('btn-fechar-perfil').addEventListener('click', () => modalEditarPerfil.classList.remove('active'));
 
-    document.getElementById("id-card-escolhido-compra").value = cardId;
-    document.getElementById("titulo-envio-comprovante-dinamico").innerText = `Confirmar Inscrição: ${card.titulo}`;
-    document.getElementById("texto-preco-modal-checkout").innerText = card.preco || "R$ 10,00";
-    document.getElementById("texto-chave-pix-checkout").innerText = card.pix || "88988470190";
+document.getElementById('form-editar-perfil-cliente').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const nome = document.getElementById('perf-nome').value.trim();
+    const sobrenome = document.getElementById('perf-sobrenome').value.trim();
+    const whatsapp = perfWhatsApp.value.replace(/\D/g, "");
+    
+    try {
+        await database.ref(`usuarios/${usuarioLogadoUid}/nome`).set(nome);
+        await database.ref(`usuarios/${usuarioLogadoUid}/sobrenome`).set(sobrenome);
+        await database.ref(`usuarios/${usuarioLogadoUid}/whatsapp`).set(whatsapp);
+        alert("🚀 Perfil atualizado com sucesso!");
+        modalEditarPerfil.classList.remove('active');
+    } catch(err) { alert("Erro ao atualizar: " + err.message); }
+});
 
-    document.getElementById("modal-formulario-envio").classList.add("active");
-}
-
-function configurarUploadComprovante() {
-    const dropZone = document.getElementById("drop-zone");
-    const fileInput = document.getElementById("comprovante");
-    const fileInfo = document.getElementById("file-info");
-    const btnFechar = document.getElementById("btn-fechar-form");
-
-    if (btnFechar) {
-        btnFechar.addEventListener("click", () => {
-            document.getElementById("modal-formulario-envio").classList.remove("active");
-        });
+document.getElementById('btn-solicitar-exclusao-conta').addEventListener('click', async () => {
+    const conf = confirm("🚨 ATENÇÃO:\n\nTem certeza absoluta de que deseja solicitar a exclusão total da sua conta?\n\nSeu acesso será revogado e os dados limpos pelo administrador.");
+    if (conf) {
+        try {
+            await database.ref(`usuarios/${usuarioLogadoUid}/status_cadastro`).set("solicitou_exclusao");
+            alert("Pedido enviado com sucesso!");
+            modalEditarPerfil.classList.remove('active');
+        } catch(err) { alert("Erro: " + err.message); }
     }
+});
 
-    if(dropZone && fileInput) {
-        dropZone.addEventListener("click", () => fileInput.click());
-        fileInput.addEventListener("change", () => {
-            if (fileInput.files.length) fileInfo.innerText = fileInput.files[0].name;
-        });
+// ==========================================================================
+// AUTENTICAÇÃO: CADASTRO, LOGIN E RECUPERAÇÃO DE SENHA
+// ==========================================================================
+document.getElementById('form-cadastro-auth').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const nome = document.getElementById('cad-nome').value.trim();
+    const sobrenome = document.getElementById('cad-sobrenome').value.trim();
+    const whatsapp = inputWhatsApp.value.replace(/\D/g, "");
+    const email = document.getElementById('cad-email').value.trim();
+    const senha = document.getElementById('cad-senha').value;
+
+    if (!validarProvedorEmail(email)) {
+        alert("⚠️ Inscrição Recusada! Utilize um e-mail legítimo convencional.");
+        return;
     }
+    try {
+        const credencial = await auth.createUserWithEmailAndPassword(email, senha);
+        await database.ref('usuarios/' + credencial.user.uid).set({
+            nome: nome, sobrenome: sobrenome, whatsapp: whatsapp, email: email,
+            status_cadastro: "pendente_pagamento", comprovante_base64: "", jogos_liberados: {}, id_card_comprado: ""
+        });
+    } catch (error) { alert("Erro ao cadastrar: " + error.message); }
+});
 
-    document.getElementById("form-comprovante").addEventListener("submit", e => {
-        e.preventDefault();
-        const cardId = document.getElementById("id-card-escolhido-compra").value;
-        const arquivo = fileInput.files[0];
+document.getElementById('form-login').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const email = document.getElementById('login-email').value.trim();
+    const senha = loginSenhaReal.value;
+    const btnLogar = document.getElementById('btn-logar');
+    btnLogar.innerText = "LOGANDO... AGUARDE"; btnLogar.disabled = true;
+    try { 
+        await auth.signInWithEmailAndPassword(email, senha); 
+    } catch (error) { 
+        alert("Dados incorretos: " + error.message); 
+        btnLogar.innerText = "LOGAR NO HUB"; btnLogar.disabled = false;
+    }
+});
 
-        if (!arquivo) {
-            alert("Por favor, selecione ou arraste o arquivo do seu comprovante.");
+document.getElementById('btn-esqueci-senha').addEventListener('click', async () => {
+    const email = document.getElementById('login-email').value.trim();
+    if (!email) { alert("⚠️ Digite o seu e-mail no campo acima."); return; }
+    try {
+        await auth.sendPasswordResetEmail(email);
+        alert(`🚀 Link enviado com sucesso para: ${email}`);
+    } catch (error) { alert("Erro: " + error.message); }
+});
+
+// Envio de Comprovante
+document.getElementById('btn-fechar-form').addEventListener('click', () => modalFormEnvio.classList.remove('active'));
+
+const inputComprovante = document.getElementById('comprovante');
+const dropZone = document.getElementById('drop-zone');
+const fileInfo = document.getElementById('file-info');
+dropZone.addEventListener('click', () => inputComprovante.click());
+inputComprovante.addEventListener('change', (e) => verificarArquivo(e.target.files[0]));
+
+function verificarArquivo(file) {
+    if (!file) return;
+    if (file.size > 1048576) { alert("Arquivo maior que 1MB."); inputComprovante.value = ""; return; }
+    fileInfo.innerHTML = `✅ Selecionado: <strong>${file.name}</strong>`;
+}
+
+const converterBase64 = (file) => {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader(); reader.readAsDataURL(file);
+        reader.onload = () => resolve(reader.result); reader.onerror = (err) => reject(err);
+    });
+};
+
+document.getElementById('form-comprovante').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const arquivo = inputComprovante.files[0];
+    if (!arquivo) return alert("Anexe o arquivo!");
+    const cardEscolhidoId = document.getElementById('id-card-escolhido-compra').value;
+    const btn = document.getElementById('btn-enviar-tudo');
+    btn.innerText = "ENVIANDO..."; btn.disabled = true;
+    try {
+        const base64Str = await converterBase64(arquivo);
+        let base64Final = arquivo.type === "application/pdf" ? base64Str : base64Str.slice(0, 49000);
+        await database.ref(`usuarios/${usuarioLogadoUid}/comprovante_base64`).set(base64Final);
+        await database.ref(`usuarios/${usuarioLogadoUid}/status_cadastro`).set("comprovante_enviado");
+        if (cardEscolhidoId) {
+            await database.ref(`usuarios/${usuarioLogadoUid}/id_card_comprado`).set(cardEscolhidoId);
+        }
+        alert("🚀 Comprovante enviado com sucesso! Aguarde a liberação do administrador.");
+        modalFormEnvio.classList.remove('active');
+    } catch (error) { alert("Erro: " + error.message); }
+    finally { btn.innerText = "CONCLUIR INSCRIÇÃO"; btn.disabled = false; }
+});
+
+function ouvirCardsDoCliente(uid) {
+    database.ref(`usuarios/${uid}`).on('value', snapshotUsuario => {
+        gridCardsCliente.innerHTML = "";
+        const dadosUser = snapshotUsuario.val() || {};
+        const liberados = dadosUser.jogos_liberados || {};
+        const chavesLiberadas = Object.keys(liberados);
+
+        if (dadosUser.status_cadastro === "comprovante_enviado" && chavesLiberadas.length === 0) {
+            const cardElement = document.createElement('div');
+            cardElement.className = 'game-card';
+            cardElement.style.borderColor = "#00ff66";
+            cardElement.innerHTML = `
+                <div style="height:280px; display:flex; align-items:center; justify-content:center; background:#161c26;">
+                    <span style="font-size:4rem; animation: fadeIn 1s infinite alternate;">⏳</span>
+                </div>
+                <h4>Analisando Comprovante...</h4>
+            `;
+            cardElement.addEventListener('click', () => {
+                alert("🎮 SEU ACESSO ESTÁ SENDO ANALISADO!\n\nRecebemos o seu comprovante PIX com sucesso. Nossa equipe está validando o pagamento para injetar o seu Card de jogo aqui no painel.");
+            });
+            gridCardsCliente.appendChild(cardElement);
             return;
         }
 
-        const leitor = new FileReader();
-        leitor.readAsDataURL(arquivo);
-        leitor.onload = () => {
-            const dadosBase64 = leitor.result;
-            const novaSolicitacaoRef = db.ref("solicitacoes_comprovantes").push();
-
-            novaSolicitacaoRef.set({
-                solicitacaoId: novaSolicitacaoRef.key,
-                cardId: cardId,
-                usuarioUid: usuarioLogadoUid,
-                nomeUsuario: `${informacoesUsuarioLogado.nome} ${informacoesUsuarioLogado.sobrenome}`,
-                whatsappUsuario: informacoesUsuarioLogado.whatsapp || "Não Informado",
-                comprovanteBase64: dadosBase64,
-                statusSolicitacao: "pendente",
-                dataEnvio: new Date().toLocaleString("pt-BR")
-            }).then(() => {
-                alert("Seu comprovante foi enviado com sucesso!");
-                document.getElementById("modal-formulario-envio").classList.remove("active");
-                document.getElementById("form-comprovante").reset();
-                fileInfo.innerText = "Nenhum arquivo selecionado";
+        chavesLiberadas.forEach(cardId => {
+            database.ref(`cards_disponiveis/${cardId}`).once('value', cardSnap => {
+                const card = cardSnap.val();
+                if (card) {
+                    const cardElement = document.createElement('div');
+                    cardElement.className = 'game-card';
+                    cardElement.innerHTML = `<img src="${card.capa_url}"><h4>${card.titulo}</h4>`;
+                    cardElement.addEventListener('contextmenu', (e) => { e.preventDefault(); return false; });
+                    cardElement.addEventListener('click', () => abrirModalJogo(card, false));
+                    gridCardsCliente.appendChild(cardElement);
+                }
             });
-        };
+        });
     });
 }
 
-// Perfil do Cliente
-function configurarPerfilCliente() {
-    const btnAbrir = document.getElementById("btn-abrir-perfil");
-    const btnFechar = document.getElementById("btn-fechar-perfil");
-    const modalPerfil = document.getElementById("modal-editar-perfil");
+function abrirModalJogo(card, modoLojaVenda = false, cardId = "") {
+    const imgCapa = document.getElementById('modal-jogo-capa');
+    imgCapa.src = card.capa_url;
+    document.getElementById('modal-jogo-titulo').innerText = card.titulo;
+    document.getElementById('modal-jogo-descricao').innerText = card.descricao;
+    imgCapa.addEventListener('dragstart', (e) => e.preventDefault());
 
-    if(btnAbrir && modalPerfil) {
-        btnAbrir.addEventListener("click", () => {
-            document.getElementById("perf-email").value = informacoesUsuarioLogado.email || "";
-            document.getElementById("perf-nome").value = informacoesUsuarioLogado.nome || "";
-            document.getElementById("perf-sobrenome").value = informacoesUsuarioLogado.sobrenome || "";
-            document.getElementById("perf-whatsapp").value = informacoesUsuarioLogado.whatsapp || "";
-            modalPerfil.classList.add("active");
-        });
+    const containerSenha = document.getElementById('container-senha-protegida-modal');
+    const btnRevelarSenha = document.getElementById('btn-revelar-senha-modal');
+    const areaTextoSenha = document.getElementById('area-texto-senha-secreta');
+    const textoSenhaReal = document.getElementById('texto-senha-secreta-real');
+    const btnCopiarSenha = document.getElementById('btn-copiar-senha-modal');
+    const containerDownloads = document.getElementById('modal-jogo-botoes');
+    const btnAdquirirLoja = document.getElementById('btn-adquirir-patch-vitrine');
+    
+    const blocoPixPreview = document.getElementById('bloco-pix-dinamico-preview');
+    const txtPixPreviewReal = document.getElementById('texto-pix-dinamico-preview-real');
+    const btnCopiarPixPreview = document.getElementById('btn-copiar-pix-preview-dinamico');
+
+    btnRevelarSenha.style.display = "block";
+    areaTextoSenha.style.display = "none";
+    containerSenha.style.display = "none";
+    containerDownloads.style.display = "none";
+    btnAdquirirLoja.style.display = "none";
+    blocoPixPreview.style.display = "none";
+
+    const precoFinalCard = card.preco || "R$ 10,00";
+    const pixFinalCard = card.pix || "88988470190";
+
+    if (modoLojaVenda) {
+        txtPixPreviewReal.innerText = pixFinalCard;
+        blocoPixPreview.style.display = "block";
+        btnCopiarPixPreview.onclick = () => { executarCopiaGamerBlindada(pixFinalCard, btnCopiarPixPreview); };
+
+        document.getElementById('texto-preco-botao-dinamico').innerText = precoFinalCard;
+        btnAdquirirLoja.style.display = "block";
+        
+        btnAdquirirLoja.onclick = () => {
+            fecharModalJogo();
+            document.getElementById('id-card-escolhido-compra').value = cardId;
+            document.getElementById('titulo-envio-comprovante-dinamico').innerText = `Adquirir: ${card.titulo}`;
+            
+            document.getElementById('texto-preco-modal-checkout').innerText = precoFinalCard;
+            document.getElementById('texto-chave-pix-checkout').innerText = pixFinalCard;
+            
+            document.getElementById('btn-copiar-pix-checkout').onclick = () => {
+                executarCopiaGamerBlindada(pixFinalCard, document.getElementById('btn-copiar-pix-checkout'));
+            };
+            
+            modalFormEnvio.classList.add('active');
+        };
+    } else {
+        containerDownloads.style.display = "flex";
+        if (card.senha_patch && card.senha_patch.trim() !== "") {
+            textoSenhaReal.innerText = card.senha_patch.trim();
+            containerSenha.style.display = "block";
+            btnRevelarSenha.onclick = () => { btnRevelarSenha.style.display = "none"; areaTextoSenha.style.display = "block"; };
+            btnCopiarSenha.onclick = () => { executarCopiaGamerBlindada(textoSenhaReal.innerText, btnCopiarSenha); };
+        }
+        
+        containerDownloads.innerHTML = "";
+        if (card.botoes) {
+            card.botoes.forEach(btn => {
+                const buttonElement = document.createElement('button');
+                buttonElement.className = 'btn-download-dinamico';
+                buttonElement.innerText = btn.texto;
+                buttonElement.style.width = "100%";
+                buttonElement.style.cursor = "pointer";
+                buttonElement.addEventListener('dragstart', (e) => e.preventDefault());
+                buttonElement.addEventListener('click', () => { window.open(btn.url, '_blank'); });
+                containerDownloads.appendChild(buttonElement);
+            });
+        }
     }
+    modalDetalhesJogo.classList.add('active');
+}
+function fecharModalJogo() { modalDetalhesJogo.classList.remove('active'); }
 
-    if(btnFechar) btnFechar.addEventListener("click", () => modalPerfil.classList.remove("active"));
+modalDetalhesJogo.addEventListener('contextmenu', (e) => { e.preventDefault(); return false; });
+window.addEventListener('keydown', (e) => {
+    if (modalDetalhesJogo.classList.contains('active')) {
+        if (e.key === "F12" || (e.ctrlKey && (e.shiftKey && e.key === "I" || e.key === "u" || e.key === "U"))) {
+            e.preventDefault(); return false;
+        }
+    }
+});
 
-    document.getElementById("form-editar-perfil-cliente").addEventListener("submit", e => {
-        e.preventDefault();
-        db.ref("usuarios/" + usuarioLogadoUid).update({
-            nome: document.getElementById("perf-nome").value.trim(),
-            sobrenome: document.getElementById("perf-sobrenome").value.trim(),
-            whatsapp: document.getElementById("perf-whatsapp").value.trim()
-        }).then(() => {
-            alert("Perfil modificado com sucesso!");
-            modalPerfil.classList.remove("active");
-        });
+// ==========================================================================
+// CONSTRUTOR DINÂMICO DO MENU HORIZONTAL (CLIENTE)
+// ==========================================================================
+function ouvirEConstruirMenuCliente() {
+    const menuContainer = document.getElementById('area-menu-dinamico');
+    const linksList = document.getElementById('container-links-menu');
+    database.ref('configuracao_menu_json').on('value', snapshot => {
+        linksList.innerHTML = ""; const jsonString = snapshot.val() || "";
+        if (!jsonString.trim()) { menuContainer.style.display = "none"; return; }
+        try {
+            const categorias = JSON.parse(jsonString);
+            if (Array.isArray(categorias) && categorias.length > 0) {
+                categorias.forEach(item => {
+                    const liCat = document.createElement('li'); liCat.className = 'nav-dinamica-item';
+                    const aCat = document.createElement('a'); aCat.className = 'nav-dinamica-link'; aCat.innerText = item.categoria;
+                    if (item.tipo === "link" && item.url_categoria) { aCat.href = item.url_categoria; aCat.target = "_blank"; }
+                    liCat.appendChild(aCat);
+                    if (item.tipo !== "link" && item.subcategorias && Array.isArray(item.subcategorias) && item.subcategorias.length > 0) {
+                        const ulSub = document.createElement('ul'); ulSub.className = 'submenu-dinamico';
+                        item.subcategorias.forEach(sub => {
+                            const liSub = document.createElement('li'); const aSub = document.createElement('a');
+                            aSub.innerText = sub.texto; aSub.href = sub.url; aSub.target = "_blank";
+                            liSub.appendChild(aSub); ulSub.appendChild(liSub);
+                        });
+                        liCat.appendChild(ulSub);
+                    }
+                    linksList.appendChild(liCat);
+                });
+                menuContainer.style.display = "block";
+            } else { menuContainer.style.display = "none"; }
+        } catch (e) { menuContainer.style.display = "none"; }
     });
+}
 
-    const btnExcluir = document.getElementById("btn-solicitar-exclusao-conta");
-    if(btnExcluir) {
-        btnExcluir.addEventListener("click", () => {
-            if(confirm("Deseja realmente solicitar a exclusão de todos os seus dados?")) {
-                db.ref("usuarios/" + usuarioLogadoUid).update({ status: "excluido" })
-                    .then(() => {
-                        alert("Sua conta foi colocada em exclusão.");
-                        modalPerfil.classList.remove("active");
-                    });
+function inicializarBotaoWhatsApp() {
+    const whatsappNumero = "5588988470190"; 
+    document.getElementById('btn-whatsapp-flutuante').href = `https://api.whatsapp.com/send?phone=${whatsappNumero}&text=Ol%C3%A1,%20preciso%20de%20ajuda%20no%20Hub!`;
+}
+
+// ==========================================================================
+// CONSTRUTOR VISUAL DE MENU (ADMIN)
+// ==========================================================================
+function ouvirEPovoarMenuVisualAdmin() {
+    const containerVisual = document.getElementById('construtor-menu-visual-container');
+    database.ref('configuracao_menu_json').once('value', snapshot => {
+        containerVisual.innerHTML = ""; const rawJson = snapshot.val() || "";
+        if (!rawJson.trim()) return;
+        try {
+            const categoriasData = JSON.parse(rawJson);
+            if (Array.isArray(categoriasData)) {
+                categoriasData.forEach(cat => {
+                    adicionarBlocoCategoriaVisual(cat.categoria, cat.subcategorias, cat.tipo || "menu", cat.url_categoria || "");
+                });
             }
-        });
-    }
-}
-
-// Renderização do Menu Horizontal Suspenso
-function renderizarMenuHorizontalCliente(listaMenu) {
-    const containerUl = document.getElementById("container-links-menu");
-    if (!containerUl) return;
-
-    containerUl.innerHTML = "";
-
-    if (!listaMenu || listaMenu.length === 0) {
-        containerUl.innerHTML = `<li style="color:#667788; font-size:0.8rem; font-style:italic;">Nenhum link útil configurado no menu de navegação.</li>`;
-        return;
-    }
-
-    listaMenu.forEach(cat => {
-        if(cat.links && cat.links.length > 0) {
-            const liTitulo = document.createElement("li");
-            liTitulo.className = "nav-item-titulo";
-            liTitulo.innerText = cat.categoria;
-            containerUl.appendChild(liTitulo);
-
-            cat.links.forEach(l => {
-                const liLink = document.createElement("li");
-                const a = document.createElement("a");
-                a.href = l.url;
-                a.target = "_blank";
-                a.className = "nav-link-item";
-                a.innerText = l.texto;
-                liLink.appendChild(a);
-                containerUl.appendChild(liLink);
-            });
-        }
+        } catch (e) {}
     });
 }
 
-// ==========================================================================
-// SEÇÃO DO PAINEL DE CONTROLE ADMINISTRATIVO (COMPLETA E RESTAURADA)
-// ==========================================================================
-function configurarAbasPainelAdmin() {
-    const tabPend = document.getElementById("tab-solic-pendentes");
-    const tabConcl = document.getElementById("tab-solic-concluidos");
-    const tabCad = document.getElementById("tab-solic-cadastrados");
-
-    if (tabPend && tabConcl && tabCad) {
-        tabPend.addEventListener("click", () => {
-            abaSolicitacoesAtivaAdmin = "pendentes";
-            tabPend.className = "tab-btn active"; tabConcl.className = "tab-btn"; tabCad.className = "tab-btn";
-            renderizarPainelControleAdmin();
-        });
-        tabConcl.addEventListener("click", () => {
-            abaSolicitacoesAtivaAdmin = "concluidos";
-            tabConcl.className = "tab-btn active"; tabPend.className = "tab-btn"; tabCad.className = "tab-btn";
-            renderizarPainelControleAdmin();
-        });
-        tabCad.addEventListener("click", () => {
-            abaSolicitacoesAtivaAdmin = "cadastrados";
-            tabCad.className = "tab-btn active"; tabPend.className = "tab-btn"; tabConcl.className = "tab-btn";
-            renderizarPainelControleAdmin();
-        });
+function adicionarBlocoCategoriaVisual(nomeCategoria = "", subcategoriasArr = [], tipoCategoria = "menu", urlCategoria = "") {
+    const containerVisual = document.getElementById('construtor-menu-visual-container');
+    const blocoId = 'cat-' + Date.now() + Math.floor(Math.random() * 100);
+    const divBloco = document.createElement('div'); divBloco.className = 'bloco-categoria-visual'; divBloco.id = blocoId;
+    divBloco.innerHTML = `
+        <div style="display: flex; gap: 10px; margin-bottom: 5px; align-items:center;">
+            <input type="text" class="input-nome-categoria" placeholder="Título da Categoria" value="${nomeCategoria}" style="margin-bottom:0; font-weight:bold; border-color:#00ff66;">
+            <button type="button" onclick="removerBlocoCategoriaVisual('${blocoId}')" class="btn-sair" style="margin-top:0; padding:6px 12px; height:38px;">Deletar</button>
+        </div>
+        <div class="radio-tipo-container">
+            <label><input type="radio" name="tipo-${blocoId}" value="menu" ${tipoCategoria === "menu" ? "checked" : ""} onclick="alternarTipoCategoriaVisual('${blocoId}')"> 📁 Menu Retrátil</label>
+            <label><input type="radio" name="tipo-${blocoId}" value="link" ${tipoCategoria === "link" ? "checked" : ""} onclick="alternarTipoCategoriaVisual('${blocoId}')"> 🔗 Link Direto</label>
+        </div>
+        <div class="container-url-categoria-direta" style="display: ${tipoCategoria === "link" ? "block" : "none"}; margin-bottom: 10px;">
+            <input type="url" class="input-url-categoria" placeholder="URL de Destino" value="${urlCategoria}" style="margin-bottom:0; border-color:#00ff66;">
+        </div>
+        <div class="wrapper-subcategorias-area" style="display: ${tipoCategoria === "menu" ? "block" : "none"};">
+            <div class="container-subcategorias-rows" style="padding-left: 15px; border-left: 2px dashed #242f41;"></div>
+            <button type="button" onclick="adicionarLinhaSubcategoriaVisual('${blocoId}')" class="btn-link" style="color:#00ff66; margin-top: 5px; font-size: 0.8rem; text-align: left; display:block;">+ Adicionar Link</button>
+        </div>
+    `;
+    containerVisual.appendChild(divBloco);
+    if (subcategoriasArr && subcategoriasArr.length > 0) {
+        subcategoriasArr.forEach(sub => { adicionarLinhaSubcategoriaVisual(blocoId, sub.texto, sub.url); });
     }
 }
 
-function configurarFormularioCadastroCards() {
-    document.getElementById("form-criar-card").addEventListener("submit", e => {
-        e.preventDefault();
-        const idEdicao = document.getElementById("card-id-edicao").value;
-        const titulo = document.getElementById("card-titulo").value.trim();
-        const capa = document.getElementById("card-capa").value.trim();
-        const descricao = document.getElementById("card-descricao").value.trim();
-        const preco = document.getElementById("card-preco").value.trim();
-        const pix = document.getElementById("card-pix").value.trim();
-        const senhaPatch = document.getElementById("card-senha-patch").value.trim();
-
-        const cardData = {
-            titulo, capa_url: capa, descricao, preco, pix, senha_patch: senhaPatch,
-            btn_txt_1: document.getElementById("btn-txt-1").value.trim(),
-            btn_url_1: document.getElementById("btn-url-1").value.trim(),
-            btn_txt_2: document.getElementById("btn-txt-2").value.trim(),
-            btn_url_2: document.getElementById("btn-url-2").value.trim(),
-            btn_txt_3: document.getElementById("btn-txt-3").value.trim(),
-            btn_url_3: document.getElementById("btn-url-3").value.trim(),
-            btn_txt_4: document.getElementById("btn-txt-4").value.trim(),
-            btn_url_4: document.getElementById("btn-url-4").value.trim()
-        };
-
-        if (idEdicao) {
-            db.ref("cards_disponiveis/" + idEdicao).update(cardData).then(() => {
-                alert("Card atualizado com sucesso!");
-                limparFormularioCardAdmin();
-            });
-        } else {
-            const novoCardRef = db.ref("cards_disponiveis").push();
-            novoCardRef.set(cardData).then(() => {
-                alert("Novo Card de Jogo cadastrado com sucesso!");
-                limparFormularioCardAdmin();
-            });
-        }
-    });
+function alternarTipoCategoriaVisual(blocoId) {
+    const bloco = document.getElementById(blocoId);
+    const tipo = bloco.querySelector(`input[name="tipo-${blocoId}"]:checked`).value;
+    const areaSub = bloco.querySelector('.wrapper-subcategorias-area');
+    const areaUrlDireta = bloco.querySelector('.container-url-categoria-direta');
+    if (tipo === 'link') { areaSub.style.display = 'none'; areaUrlDireta.style.display = 'block'; }
+    else { areaSub.style.display = 'block'; areaUrlDireta.style.display = 'none'; }
 }
 
-function limparFormularioCardAdmin() {
-    document.getElementById("form-criar-card").reset();
-    document.getElementById("card-id-edicao").value = "";
-    document.getElementById("titulo-form-card").innerText = "1. Criar Novo Card de Jogo";
-    document.getElementById("btn-salvar-card").innerText = "SALVAR CARD";
-    document.getElementById("btn-cancelar-edicao").style.display = "none";
+function adicionarLinhaSubcategoriaVisual(blocoId, txtLink = "", urlLink = "") {
+    const bloco = document.getElementById(blocoId);
+    const containerRows = bloco.querySelector('.container-subcategorias-rows');
+    const rowId = 'row-' + Date.now() + Math.floor(Math.random() * 100);
+    const divRow = document.createElement('div'); divRow.className = 'linha-subcategoria-visual'; divRow.id = rowId;
+    divRow.innerHTML = `
+        <input type="text" class="sub-txt" placeholder="Texto" value="${txtLink}" style="flex: 1;">
+        <input type="url" class="sub-url" placeholder="URL" value="${urlLink}" style="flex: 1.5;">
+        <button type="button" onclick="document.getElementById('${rowId}').remove()" class="btn-sair" style="background:#421414; color:#ff3333; margin-top:0; border:1px solid #ff3333; height:38px; padding:0 10px;">Excluir</button>
+    `;
+    containerRows.appendChild(divRow);
+}
+
+document.getElementById('btn-salvar-visual-menu').addEventListener('click', async () => {
+    const blocos = document.querySelectorAll('.bloco-categoria-visual');
+    const estruturaMenuFinal = []; let dadosValidos = true;
+    blocos.forEach(bloco => {
+        const nomeCat = bloco.querySelector('.input-nome-categoria').value.trim(); if (!nomeCat) return;
+        const tipoSelecionado = bloco.querySelector(`input[name="tipo-${bloco.id}"]:checked`).value;
+        const urlCategoriaDireta = bloco.querySelector('.input-url-categoria').value.trim();
+        const subcategorias = [];
+        if (tipoSelecionado === "link") { if (!urlCategoriaDireta) dadosValidos = false; }
+        else {
+            const linesSub = bloco.querySelectorAll('.linha-subcategoria-visual');
+            linesSub.forEach(linha => {
+                const txt = linha.querySelector('.sub-txt').value.trim();
+                const url = linha.querySelector('.sub-url').value.trim();
+                if (txt && url) subcategorias.push({ texto: txt, url: url });
+                else if (txt || url) dadosValidos = false;
+            });
+        }
+        estruturaMenuFinal.push({ categoria: nomeCat, tipo: tipoSelecionado, url_categoria: tipoSelecionado === "link" ? urlCategoriaDireta : "", subcategorias: tipoSelecionado === "menu" ? subcategorias : [] });
+    });
+    if (!dadosValidos) { alert("⚠️ Existem campos incompletos no construtor."); return; }
+    try {
+        await database.ref('configuracao_menu_json').set(estruturaMenuFinal.length > 0 ? JSON.stringify(estruturaMenuFinal, null, 2) : "");
+        alert("🚀 Menu Horizontal atualizado com sucesso!");
+    } catch (e) { alert("Erro: " + e.message); }
+});
+
+function removerBlocoCategoriaVisual(blocoId) {
+    if (confirm("⚠️ Deseja deletar toda essa categoria?")) { document.getElementById(blocoId).remove(); }
+}
+
+// ==========================================================================
+// CONTROLE DE CARDS DE JOGOS (ADMIN)
+// ==========================================================================
+document.getElementById('form-criar-card').addEventListener('submit', async (e) => {
+    e.preventDefault(); const idEdicao = document.getElementById('card-id-edicao').value;
+    const botoes = [];
+    for (let i = 1; i <= 4; i++) {
+        const txt = document.getElementById(`btn-txt-${i}`).value.trim();
+        const url = document.getElementById(`btn-url-${i}`).value.trim();
+        if (txt && url) botoes.push({ texto: txt, url: url });
+    }
+    
+    const dadosCard = { 
+        titulo: document.getElementById('card-titulo').value.trim(), 
+        capa_url: document.getElementById('card-capa').value.trim(), 
+        descricao: document.getElementById('card-descricao').value.trim(), 
+        preco: document.getElementById('card-preco').value.trim(), 
+        pix: document.getElementById('card-pix').value.trim(), 
+        senha_patch: document.getElementById('card-senha-patch').value.trim(), 
+        botoes: botoes 
+    };
+
+    try {
+        if (idEdicao) { await database.ref(`cards_disponiveis/${idEdicao}`).set(dadosCard); alert("🔄 Card atualizado!"); cancelarEdicaoCard(); }
+        else { await database.ref('cards_disponiveis').push(dadosCard); alert("🎯 Novo Card criado!"); document.getElementById('form-criar-card').reset(); }
+    } catch (error) { alert("Erro: " + error.message); }
+});
+
+function ouvirCardsGlobaisAdmin() {
+    database.ref('cards_disponiveis').on('value', snapshot => {
+        listaCardsCriados.innerHTML = ""; const cards = snapshot.val();
+        if (!cards) { listaCardsCriados.innerHTML = `<p style="color:#aaa; font-size:0.9rem;">Nenhum card.</p>`; return; }
+        Object.keys(cards).forEach(id => {
+            const div = document.createElement('div'); div.className = 'user-item'; div.style.borderLeft = "3px solid #00ff66";
+            div.innerHTML = `
+                <div style="display:flex; gap:10px; align-items:center;">
+                    <img src="${cards[id].capa_url}" style="width:40px; height:50px; object-fit:cover; border-radius:4px;">
+                    <div>
+                        <p style="margin:0; font-weight:bold; color:#fff;">${cards[id].titulo}</p>
+                        <p style="margin:2px 0 0 0; font-size:0.75rem; color:#00ff66;">${cards[id].preco || 'R$ 10,00'}</p>
+                    </div>
+                </div>
+                <div style="display:flex; gap:5px; margin-top:10px;">
+                    <button class="btn-visualizar-comprovante" style="margin:0; background:#24334c; border-color:#00ff66; color:#00ff66;" onclick="carregarCardParaEdicao('${id}')">✏️ Editar</button>
+                    <button class="btn-visualizar-comprovante" style="margin:0; background:#3d1c1c; border-color:#ff3333; color:#ff3333;" onclick="deletarCardDoSistema('${id}')">🗑️ Apagar</button>
+                </div>
+            `;
+            listaCardsCriados.appendChild(div);
+        });
+    });
 }
 
 function carregarCardParaEdicao(id) {
-    const card = todosOsCards[id];
-    if (!card) return;
-
-    document.getElementById("card-id-edicao").value = id;
-    document.getElementById("card-titulo").value = card.titulo || "";
-    document.getElementById("card-capa").value = card.capa_url || card.capa || "";
-    document.getElementById("card-descricao").value = card.descricao || "";
-    document.getElementById("card-preco").value = card.preco || "";
-    document.getElementById("card-pix").value = card.pix || "";
-    document.getElementById("card-senha-patch").value = card.senha_patch || card.senhaPatch || "";
-    
-    for (let i = 1; i <= 4; i++) {
-        document.getElementById(`btn-txt-${i}`).value = card[`btn_txt_${i}`] || card[`btnTxt${i}`] || "";
-        document.getElementById(`btn-url-${i}`).value = card[`btn_url_${i}`] || card[`btnUrl${i}`] || "";
-    }
-
-    document.getElementById("titulo-form-card").innerText = "📝 Editando Card Existente";
-    document.getElementById("btn-salvar-card").innerText = "ATUALIZAR CARD";
-    document.getElementById("btn-cancelar-edicao").style.display = "inline-block";
-}
-
-function deletarCardJogoAdmin(id) {
-    if (confirm("Deseja realmente remover este card permanentemente do sistema?")) {
-        db.ref("cards_disponiveis/" + id).remove().then(() => alert("Card excluído com sucesso!"));
-    }
-}
-
-function renderizarPainelControleAdmin() {
-    const containerListaCards = document.getElementById("lista-cards-criados");
-    if(containerListaCards) {
-        containerListaCards.innerHTML = "";
-        Object.keys(todosOsCards).forEach(id => {
-            const card = todosOsCards[id];
-            const item = document.createElement("div");
-            item.className = "user-item-box";
-            item.style.display = "flex";
-            item.style.justifyContent = "space-between";
-            item.style.alignItems = "center";
-            item.innerHTML = `
-                <div>
-                    <strong style="font-size:0.9rem; color:#fff;">${card.titulo}</strong>
-                    <p style="font-size:0.75rem; color:#8899a6; margin-top:3px;">Preço: ${card.preco || "R$ 10,00"}</p>
-                </div>
-                <div style="display:flex; gap:6px;">
-                    <button onclick="carregarCardParaEdicao('${id}')" class="btn-visualizar-comprovante" style="padding:4px 8px; font-size:0.7rem; margin:0;">✏️</button>
-                    <button onclick="deletarCardJogoAdmin('${id}')" class="btn-recusar-pedido" style="padding:4px 8px; font-size:0.7rem; margin:0;">❌</button>
-                </div>
-            `;
-            containerListaCards.appendChild(item);
-        });
-    }
-
-    const containerListaPedidosUsuarios = document.getElementById("lista-usuarios-admin");
-    const containerResetBox = document.getElementById("container-reset-pre-venda");
-    if (!containerListaPedidosUsuarios) return;
-
-    containerListaPedidosUsuarios.innerHTML = "";
-    if(containerResetBox) containerResetBox.style.display = "none";
-
-    if (abaSolicitacoesAtivaAdmin === "pendentes" || abaSolicitacoesAtivaAdmin === "concluidos") {
-        if(abaSolicitacoesAtivaAdmin === "concluidos" && containerResetBox) containerResetBox.style.display = "block";
-
-        let contadorFiltro = 0;
-        Object.keys(solicitacoesGeraisDoBanco).forEach(key => {
-            const sol = solicitacoesGeraisDoBanco[key];
-            const statusFiltroAlvo = abaSolicitacoesAtivaAdmin === "pendentes" ? "pendente" : "aprovado";
-
-            if (sol.statusSolicitacao === statusFiltroAlvo) {
-                contadorFiltro++;
-                const card = todosOsCards[sol.cardId] || { titulo: "Card Removido" };
-                const div = document.createElement("div");
-                div.className = "user-item-box";
-                
-                let acoesHtml = "";
-                if (sol.statusSolicitacao === "pendente") {
-                    acoesHtml = `
-                        <div class="acoes-admin-row">
-                            <button onclick="alterarStatusPedidoCliente('${sol.solicitacaoId}', 'aprovado')" class="btn-aprovar-pedido">LIBERAR PATCH</button>
-                            <button onclick="alterarStatusPedidoCliente('${sol.solicitacaoId}', 'recusado')" class="btn-recusar-pedido">Recusar</button>
-                        </div>
-                    `;
-                } else {
-                    acoesHtml = `
-                        <div class="acoes-admin-row">
-                            <button onclick="alterarStatusPedidoCliente('${sol.solicitacaoId}', 'pendente')" class="btn-recusar-pedido" style="border-color:#ffcc00; color:#ffcc00; width:100%;">Reverter para Análise</button>
-                        </div>
-                    `;
-                }
-
-                div.innerHTML = `
-                    <div class="user-item-header">
-                        <div class="user-item-info">
-                            <h4>${sol.nomeUsuario}</h4>
-                            <p>WhatsApp: <strong>${sol.whatsappUsuario}</strong></p>
-                            <p>Item Adquirido: <strong style="color:#00ff66;">${card.titulo}</strong></p>
-                        </div>
-                        <span class="badge-status ${sol.statusSolicitacao}">${sol.statusSolicitacao}</span>
-                    </div>
-                    <div style="display:flex; gap:8px; margin-top:10px;">
-                        <a href="${sol.comprovanteBase64}" target="_blank" class="btn-visualizar-comprovante" style="width:100%;">VER FOTO DO COMPROVANTE</a>
-                    </div>
-                    ${acoesHtml}
-                `;
-                containerListaPedidosUsuarios.appendChild(div);
-            }
-        });
-
-        if(contadorFiltro === 0) {
-            containerListaPedidosUsuarios.innerHTML = `<div style="text-align:center; color:#667788; padding:30px; font-size:0.85rem;">Nenhuma inscrição nesta aba.</div>`;
-        }
-    } else if (abaSolicitacoesAtivaAdmin === "cadastrados") {
-        db.ref("usuarios").once("value", snapshot => {
-            const users = snapshot.val() || {};
-            let countUsers = 0;
-            Object.keys(users).forEach(uid => {
-                const u = users[uid];
-                countUsers++;
-                const itemUser = document.createElement("div");
-                itemUser.className = "user-item-box";
-                
-                let btnAcaoUser = "";
-                if(u.regra !== "admin") {
-                    btnAcaoUser = `<button onclick="promoverUsuarioParaAdmin('${u.uid}')" class="btn-visualizar-comprovante" style="margin-top:10px; font-size:0.7rem; padding:4px 8px; border-color:#00ff66; color:#00ff66;">Promover a Admin</button>`;
-                } else {
-                    btnAcaoUser = `<span style="font-size:0.7rem; color:#ffcc00; display:block; margin-top:10px; font-weight:bold;">👑 Administrador Geral</span>`;
-                }
-
-                itemUser.innerHTML = `
-                    <div class="user-item-header">
-                        <div class="user-item-info">
-                            <h4>${u.nome || "Sem Nome"} ${u.sobrenome || ""}</h4>
-                            <p>E-mail: ${u.email}</p>
-                            <p>WhatsApp: ${u.whatsapp || "Não cadastrado"}</p>
-                        </div>
-                        <span class="badge-status cliente">${u.regra || 'cliente'}</span>
-                    </div>
-                    ${btnAcaoUser}
-                `;
-                containerListaPedidosUsuarios.appendChild(itemUser);
-            });
-        });
-    }
-}
-
-function alterarStatusPedidoCliente(solicitacaoId, novoStatus) {
-    db.ref(`solicitacoes_comprovantes/${solicitacaoId}`).update({ statusSolicitacao: novoStatus })
-        .then(() => alert("Status do pedido modificado com sucesso!"));
-}
-
-function promoverUsuarioParaAdmin(uid) {
-    if(confirm("Deseja promover este usuário a Administrador?")) {
-        db.ref(`usuarios/${uid}`).update({ regra: "admin" })
-            .then(() => alert("Usuário promovido com sucesso!"));
-    }
-}
-
-function renderizarConstrutorVisualMenuAdmin() {
-    const container = document.getElementById("construtor-menu-visual-container");
-    if (!container) return;
-
-    container.innerHTML = "";
-
-    if (estruturaLayoutMenuVisual.length === 0) {
-        container.innerHTML = `<p style="color:#667788; font-size:0.8rem; font-style:italic; text-align:center;">Nenhum link ou categoria adicionado.</p>`;
-        return;
-    }
-
-    estruturaLayoutMenuVisual.forEach((cat, indexCat) => {
-        const blocoCat = document.createElement("div");
-        blocoCat.className = "bloco-categoria-visual";
-        
-        let linksHtml = "";
-        if(cat.links && cat.links.length > 0) {
-            cat.links.forEach((l, indexLink) => {
-                linksHtml += `
-                    <div class="linha-link-visual">
-                        <input type="text" value="${l.texto}" placeholder="Texto do Link" oninput="atualizarCampoTextoMenuVisual(${indexCat}, ${indexLink}, 'texto', this.value)" style="flex:1; background:#0b0e14; border:1px solid #1f2a3c; padding:6px; color:#fff; font-size:0.8rem; border-radius:4px;">
-                        <input type="url" value="${l.url}" placeholder="URL" oninput="atualizarCampoTextoMenuVisual(${indexCat}, ${indexLink}, 'url', this.value)" style="flex:1.5; background:#0b0e14; border:1px solid #1f2a3c; padding:6px; color:#fff; font-size:0.8rem; border-radius:4px;">
-                        <button type="button" onclick="removerLinkMenuVisual(${indexCat}, ${indexLink})" style="background:none; border:none; color:#ff3333; cursor:pointer;">❌</button>
-                    </div>
-                `;
-            });
-        }
-
-        blocoCat.innerHTML = `
-            <div class="bloco-categoria-header">
-                <input type="text" value="${cat.categoria}" oninput="atualizarNomeCategoriaMenuVisual(${indexCat}, this.value)" style="flex:1; background:#0b0e14; border:1px solid #1f2a3c; padding:8px; color:#ffcc00; font-weight:bold; font-size:0.85rem; border-radius:4px;">
-                <button type="button" onclick="removerCategoriaMenuVisual(${indexCat})" class="btn-recusar-pedido" style="margin:0; padding:4px 10px; font-size:0.75rem;">Excluir</button>
-            </div>
-            <div class="lista-links-visual-container">${linksHtml}</div>
-            <button type="button" onclick="adicionarLinkEmCategoriaVisual(${indexCat})" class="btn-visualizar-comprovante" style="margin:0; font-size:0.7rem; padding:4px 8px;">+ Adicionar Link</button>
-        `;
-        container.appendChild(blocoCat);
+    database.ref(`cards_disponiveis/${id}`).once('value', snapshot => {
+        const card = snapshot.val(); if (!card) return;
+        document.getElementById('card-id-edicao').value = id;
+        document.getElementById('card-titulo').value = card.titulo;
+        document.getElementById('card-capa').value = card.capa_url;
+        document.getElementById('card-descricao').value = card.descricao;
+        document.getElementById('card-preco').value = card.preco || "";
+        document.getElementById('card-pix').value = card.pix || "";
+        document.getElementById('card-senha-patch').value = card.senha_patch || "";
+        for(let i=1; i<=4; i++) { document.getElementById(`btn-txt-${i}`).value = ""; document.getElementById(`btn-url-${i}`).value = ""; }
+        if (card.botoes) { card.botoes.forEach((btn, index) => { document.getElementById(`btn-txt-${index+1}`).value = btn.texto; document.getElementById(`btn-url-${index+1}`).value = btn.url; }); }
+        document.getElementById('titulo-form-card').innerText = "✏️ Editando Card";
+        document.getElementById('btn-cancelar-edicao').style.display = "block";
+        document.getElementById('btn-salvar-card').innerText = "ATUALIZAR CARD";
     });
 }
 
-function adicionarBlocoCategoriaVisual() {
-    estruturaLayoutMenuVisual.push({ categoria: "NOVA CATEGORIA", links: [] });
-    renderizarConstrutorVisualMenuAdmin();
+function cancelarEdicaoCard() {
+    document.getElementById('card-id-edicao').value = ""; document.getElementById('form-criar-card').reset();
+    document.getElementById('titulo-form-card').innerText = "1. Criar Novo Card de Jogo";
+    document.getElementById('btn-cancelar-edicao').style.display = "none"; document.getElementById('btn-salvar-card').innerText = "SALVAR CARD";
 }
-function removerCategoriaMenuVisual(indexCat) {
-    estruturaLayoutMenuVisual.splice(indexCat, 1);
-    renderizarConstrutorVisualMenuAdmin();
-}
-function atualizarNomeCategoriaMenuVisual(indexCat, valor) {
-    estruturaLayoutMenuVisual[indexCat].categoria = valor;
-}
-function adicionarLinkEmCategoriaVisual(indexCat) {
-    if(!estruturaLayoutMenuVisual[indexCat].links) estruturaLayoutMenuVisual[indexCat].links = [];
-    estruturaLayoutMenuVisual[indexCat].links.push({ texto: "Novo Link", url: "https://" });
-    renderizarConstrutorVisualMenuAdmin();
-}
-function removerLinkMenuVisual(indexCat, indexLink) {
-    estruturaLayoutMenuVisual[indexCat].links.splice(indexLink, 1);
-    renderizarConstrutorVisualMenuAdmin();
-}
-function atualizarCampoTextoMenuVisual(indexCat, indexLink, campo, valor) {
-    estruturaLayoutMenuVisual[indexCat].links[indexLink][campo] = valor;
-}
-function salvarLayoutMenuNoFirebase() {
-    db.ref("configuracao_menu_horizontal").set(estruturaLayoutMenuVisual)
-        .then(() => alert("Menu salvo com sucesso!"));
+document.getElementById('btn-cancelar-edicao').addEventListener('click', cancelarEdicaoCard);
+
+async function deletarCardDoSistema(id) {
+    if (confirm("⚠️ Deseja apagar este card?")) { await database.ref(`cards_disponiveis/${id}`).remove(); alert("Card excluído."); }
 }
 
-function exportarCardsParaJSON() {
-    const dadosConvertidosStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(todosOsCards, null, 2));
-    const elementoDownloadAuxiliar = document.createElement("a");
-    elementoDownloadAuxiliar.setAttribute("href", dadosConvertidosStr);
-    elementoDownloadAuxiliar.setAttribute("download", `backup_cards_hub_gamer.json`);
-    document.body.appendChild(elementoDownloadAuxiliar);
-    elementoDownloadAuxiliar.click();
-    elementoDownloadAuxiliar.remove();
-}
+document.getElementById('btn-exportar-cards').addEventListener('click', () => {
+    database.ref('cards_disponiveis').once('value', snapshot => {
+        const data = snapshot.val(); if(!data) return alert("Vazio.");
+        const blob = new Blob([JSON.stringify(data, null, 2)], {type : 'application/json'});
+        const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'backup-cards.json'; a.click();
+    });
+});
 
-function executarResetGeralTemporadaPreVenda() {
-    if (confirm("Deseja redefinir as pré-vendas?")) {
-        let chavesParaRemover = [];
-        Object.keys(solicitacoesGeraisDoBanco).forEach(key => {
-            if (solicitacoesGeraisDoBanco[key].statusSolicitacao === "aprovado") {
-                chavesParaRemover.push(key);
+function inicializarPainelAdmin() {
+    database.ref('cards_disponiveis').once('value', snapshotCards => {
+        const cacheCardsGlobais = snapshotCards.val() || {};
+
+        database.ref('usuarios').on('value', snapshot => {
+            listaUsuariosAdmin.innerHTML = ""; const users = snapshot.val();
+            if (!users) { listaUsuariosAdmin.innerHTML = `<p style="color:#aaa; padding:15px;">Nenhum usuário.</p>`; return; }
+
+            let contagemFiltrados = 0;
+
+            Object.keys(users).forEach(uid => {
+                if (users[uid].email === "admin@admin.com") return;
+
+                const status = users[uid].status_cadastro || 'pendente_pagamento';
+
+                if (filtroAdminAtual === "pendentes" && status === "pago") return;
+                if (filtroAdminAtual === "pendentes" && status === "cliente_cadastrado") return;
+                if (filtroAdminAtual === "pendentes" && status === "solicitou_exclusao") return; 
+                
+                if (filtroAdminAtual === "concluidos" && status !== "pago") return;
+                
+                if (filtroAdminAtual === "cadastrados" && status !== "cliente_cadastrado" && status !== "solicitou_exclusao") return;
+
+                contagemFiltrados++;
+                const userBox = document.createElement('div'); 
+                userBox.className = 'user-item';
+
+                if (status === "solicitou_exclusao") {
+                    userBox.style.border = "2px solid #ff3333";
+                }
+
+                let listaJogosAtivosHtml = "";
+                const jogos = users[uid].jogos_liberados || {};
+                const keysJogos = Object.keys(jogos);
+                if (keysJogos.length === 0) { listaJogosAtivosHtml = "<li style='color:#ff3333;'>Nenhum card ativo</li>"; }
+                else {
+                    keysJogos.forEach(gameId => {
+                        listaJogosAtivosHtml += `<li style="display:flex; justify-content:space-between; align-items:center; background:#141d26; padding:5px; margin:3px 0; border-radius:4px; font-size:0.8rem;"><span>🎮 ID: ${gameId.slice(-6)}...</span><button onclick="removerAcessoJogo('${uid}', '${gameId}')" style="background:none; border:none; color:#ff3333; cursor:pointer;">[Remover]</button></li>`;
+                    });
+                }
+
+                const estiloGamerSelectCorrigido = `style="width:100%; height:40px; background:#1c2434; border:1px solid #242f41; border-radius:4px; color:#fff; padding:0 10px; margin-bottom:10px; font-size:0.85rem;"`;
+
+                if (filtroAdminAtual === "pendentes") {
+                    const temComp = users[uid].comprovante_base64 && users[uid].comprovante_base64.length > 10;
+                    const btnComp = temComp 
+                        ? `<button class="btn-visualizar-comprovante" onclick="abrirComprovanteNovaAba('${uid}')">👁️ Ver Comprovante Enviado</button>`
+                        : `<p style="color:#00ff66; font-size:0.8rem; margin:5px 0;">⏳ Aguardando comprovante PIX...</p>`;
+
+                    let tagJogoEscolhidoLoja = "";
+                    const idComprado = users[uid].id_card_comprado;
+                    if (idComprado && cacheCardsGlobais[idComprado]) {
+                        const vlr = cacheCardsGlobais[idComprado].preco || "R$ 10,00";
+                        tagJogoEscolhidoLoja = `<p style="background:#132219; border:1px solid #00ff66; color:#00ff66; padding:6px; border-radius:4px; font-size:0.85rem; margin-bottom:10px;">🎯 <strong>Patch Escolhido:</strong> ${cacheCardsGlobais[idComprado].titulo} (${vlr})</p>`;
+                    }
+
+                    userBox.innerHTML = `
+                        <div class="user-info">
+                            <p><strong>Jogador:</strong> ${users[uid].nome} ${users[uid].sobrenome}</p>
+                            <p><strong>E-mail:</strong> ${users[uid].email}</p>
+                            <p><strong>WhatsApp:</strong> ${users[uid].whatsapp || 'Não cadastrado'}</p>
+                            <p><strong>Status Antigo:</strong> <span style="color:#00ff66">${status.toUpperCase()}</span></p>
+                            ${tagJogoEscolhidoLoja}
+                            ${btnComp}
+                        </div>
+                        <select id="select-game-${uid}" ${estiloGamerSelectCorrigido}><option value="${idComprado || ''}">${idComprado && cacheCardsGlobais[idComprado] ? 'Injetar: ' + cacheCardsGlobais[idComprado].titulo : '-- Selecione o Card para Injetar --'}</option></select>
+                        <button class="btn-inject" onclick="injetarCardParaUsuario('${uid}')">Confirmar Pagamento & Mover para Aprovados</button>
+                        <button class="btn-sair" onclick="deletarUsuarioDoBancoTotal('${uid}', '${users[uid].email}')" style="width:100%; font-size:0.8rem; padding:6px; margin-top:5px; background:#211212; border:1px dashed #ff3333; color:#ff5555;">🗑️ Excluir Conta permanentemente</button>
+                    `;
+                } else if (filtroAdminAtual === "concluidos") {
+                    userBox.innerHTML = `
+                        <div class="user-info">
+                            <p><strong>🏆 Jogador Ativo (Temporada):</strong> ${users[uid].nome} ${users[uid].sobrenome}</p>
+                            <p><strong>WhatsApp:</strong> ${users[uid].whatsapp || 'Não cadastrado'}</p>
+                            <p><strong>E-mail:</strong> ${users[uid].email}</p>
+                            <div style="margin: 10px 0; background:#1b2430; padding:8px; border-radius:4px;">
+                                <p style="margin:0 0 5px 0; font-size:0.8rem; color:#00ff66;">Cards Ativos na Conta:</p>
+                                <ul style="margin:0; padding:0; list-style:none;">${listaJogosAtivosHtml}</ul>
+                            </div>
+                        </div>
+                        <div style="display:flex; gap:5px; align-items:center; margin-bottom:10px;">
+                            <select id="select-game-${uid}" ${estiloGamerSelectCorrigido} style="margin:0; flex:1; height:40px;"><option value="">+ Injetar Card Extra</option></select>
+                            <button class="btn-gamer" onclick="injetarCardParaUsuario('${uid}')" style="margin:0; height:40px; width:45px; padding:0;">+</button>
+                        </div>
+                        <button class="btn-sair" onclick="excluirSolicitacaoEComprovante('${uid}')" style="width:100%; font-size:0.8rem; padding:6px; background:#2d1313; border:1px solid #ff3333; color:#ff3333;">📦 Mover Manualmente para Cadastrados (Recuar)</button>
+                    `;
+                } else {
+                    let botoesAbaCadastrados = `
+                        <div style="display:flex; gap:5px; align-items:center;">
+                            <select id="select-game-${uid}" ${estiloGamerSelectCorrigido} style="margin:0; flex:1; height:40px;"><option value="">Injetar Novo Patch Direto</option></select>
+                            <button class="btn-gamer" onclick="injetarCardParaUsuario('${uid}')" style="margin:0; height:40px; width:45px; padding:0;">+</button>
+                        </div>
+                    `;
+
+                    if (status === "solicitou_exclusao") {
+                        botoesAbaCadastrados = `
+                            <div style="background:#281216; border:1px solid #ff3333; padding:10px; border-radius:4px; text-align:center;">
+                                <p style="color:#ff3333; font-weight:bold; font-size:0.85rem; margin-bottom:8px;">⚠️ O USUÁRIO SOLICITOU A EXCLUSÃO DA CONTA</p>
+                                <button class="btn-gamer" style="background:#ff3333; color:#fff; font-size:0.8rem; padding:8px;" onclick="deletarUsuarioDoBancoTotal('${uid}', '${users[uid].email}')">🚨 APAGAR DADOS DO BANCO TOTAL</button>
+                            </div>
+                        `;
+                    }
+
+                    userBox.innerHTML = `
+                        <div class="user-info">
+                            <p><strong>👥 Cliente da Base Comercial:</strong> ${users[uid].nome} ${users[uid].sobrenome}</p>
+                            <p><strong>WhatsApp:</strong> ${users[uid].whatsapp || 'Não cadastrado'}</p>
+                            <p><strong>E-mail:</strong> ${users[uid].email}</p>
+                            <div style="margin: 10px 0; background:#161c26; border:1px solid #242f41; padding:8px; border-radius:4px;">
+                                <p style="margin:0 0 5px 0; font-size:0.8rem; color:#8899a6;">Patrimônio de Jogos do Cliente:</p>
+                                <ul style="margin:0; padding:0; list-style:none;">${listaJogosAtivosHtml}</ul>
+                            </div>
+                        </div>
+                        ${botoesAbaCadastrados}
+                    `;
+                }
+
+                listaUsuariosAdmin.appendChild(userBox);
+                const selectElement = document.getElementById(`select-game-${uid}`);
+                if (selectElement) alimentarSelectComCards(selectElement, users[uid].jogos_liberados);
+            });
+
+            if (contagemFiltrados === 0) {
+                listaUsuariosAdmin.innerHTML = `<p style="color:#aaa; padding:15px; text-align:center;">Nenhum jogador nesta aba.</p>`;
             }
         });
-        let tarefasRemocao = chavesParaRemover.map(key => db.ref(`solicitacoes_comprovantes/${key}`).remove());
-        Promise.all(tarefasRemocao).then(() => alert("Temporada redefinida!"));
+    });
+}
+
+function abrirComprovanteNovaAba(uid) {
+    database.ref(`usuarios/${uid}/comprovante_base64`).once('value', snapshot => {
+        const base64Data = snapshot.val();
+        if (base64Data) {
+            const novaAba = window.open();
+            if (base64Data.startsWith("data:application/pdf")) { novaAba.document.write(`<iframe src="${base64Data}" width="100%" height="100%" style="border:none;"></iframe>`); }
+            else { novaAba.document.write(`<body style="background:#0b0e14; margin:0; display:flex; align-items:center; justify-content:center;"><img src="${base64Data}" style="max-width:100%; max-height:100vh; border:2px solid #00ff66; border-radius:8px;"></body>`); }
+        }
+    });
+}
+
+function alimentarSelectComCards(selectElement, jogosJaLiberados = {}) {
+    if (!selectElement) return;
+    database.ref('cards_disponiveis').once('value', snapshot => {
+        const cards = snapshot.val() || {};
+        Object.keys(cards).forEach(cardId => {
+            const opt = document.createElement('option'); opt.value = cardId;
+            opt.innerText = cards[cardId].titulo + (jogosJaLiberados[cardId] ? " (Ativo)" : "");
+            selectElement.appendChild(opt);
+        });
+    });
+}
+
+async function injetarCardParaUsuario(uid) {
+    const selectElement = document.getElementById(`select-game-${uid}`);
+    if (!selectElement) return;
+    const selectedCardId = selectElement.value;
+    try {
+        await database.ref(`usuarios/${uid}/status_cadastro`).set("pago");
+        if (selectedCardId) {
+            await database.ref(`usuarios/${uid}/jogos_liberados/${selectedCardId}`).set(true);
+            alert("🔥 Sucesso! Jogador movido para Aprovados!");
+        } else {
+            alert("Status atualizado para PAGO!");
+        }
+    } catch (error) { alert("Erro: " + error.message); }
+}
+
+async function removerAcessoJogo(uid, gameId) {
+    if (confirm("Deseja remover o acesso deste card da conta do jogador?")) {
+        await database.ref(`usuarios/${uid}/jogos_liberados/${gameId}`).remove();
+        alert("Acesso removido!");
     }
 }
 
-function deslogar() {
-    auth.signOut();
+async function excluirSolicitacaoEComprovante(uid) {
+    if (confirm("Deseja arquivar e mover este cliente para a aba de 'Clientes Cadastrados'?")) {
+        try {
+            await database.ref(`usuarios/${uid}/comprovante_base64`).set("");
+            await database.ref(`usuarios/${uid}/id_card_comprado`).set("");
+            await database.ref(`usuarios/${uid}/status_cadastro`).set("cliente_cadastrado");
+            alert("Mergulhado com sucesso na lista de cadastrados!");
+        } catch (error) { alert("Erro: " + error.message); }
+    }
 }
+
+async function deletarUsuarioDoBancoTotal(uid, email) {
+    if (confirm(`🚨 REMOÇÃO PERMANENTE DO BANCO:\n\nIsso vai apagar os registros do e-mail: ${email}.\n\nClique em OK para prosseguir.`)) {
+        try {
+            await database.ref(`usuarios/${uid}`).remove();
+            alert(`🔥 Dados deletados com sucesso no banco!\n\nPASSO FINAL OBRIGATÓRIO:\nRemova manualmente o usuário no Auth usando o e-mail:\n 👉 ${email}`);
+        } catch(err) { alert("Erro ao limpar dados do banco: " + err.message); }
+    }
+}
+
+document.getElementById('btn-reset-geral-temporada').addEventListener('click', async () => {
+    const conf1 = confirm("⚠️ ATENÇÃO - FIM DA PRÉ-VENDA:\n\nDeseja continuar?");
+    if (conf1) {
+        try {
+            const btnReset = document.getElementById('btn-reset-geral-temporada');
+            btnReset.innerText = "ARQUIVANDO TEMPORADA..."; btnReset.disabled = true;
+            const snapshot = await database.ref('usuarios').once('value');
+            const usuarios = snapshot.val();
+            if (usuarios) {
+                const loteMudancas = {};
+                Object.keys(usuarios).forEach(uid => {
+                    if (usuarios[uid].email !== "admin@admin.com" && usuarios[uid].status_cadastro === "pago") {
+                        loteMudancas[`usuarios/${uid}/status_cadastro`] = "cliente_cadastrado";
+                        loteMudancas[`usuarios/${uid}/comprovante_base64`] = ""; 
+                        loteMudancas[`usuarios/${uid}/id_card_comprado`] = ""; 
+                    }
+                });
+                await database.ref().update(loteMudancas);
+                alert("🗂️ Temporada encerrada e arquivada com sucesso!");
+            }
+        } catch (error) { alert("Erro no reset geral: " + error.message); }
+        finally {
+            const btnReset = document.getElementById('btn-reset-geral-temporada');
+            btnReset.innerText = "📦 ARQUIVAR APROVADOS DA TEMPORADA"; btnReset.disabled = false;
+        }
+    }
+});
+
+document.addEventListener('contextmenu', (e) => {
+    if (document.getElementById('view-cliente').classList.contains('active')) {
+        const target = e.target.closest('.game-card, .modal-content, img, #container-senha-protegida-modal');
+        if (target) { e.preventDefault(); return false; }
+    }
+});
