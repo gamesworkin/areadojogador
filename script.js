@@ -88,7 +88,7 @@ document.getElementById('tab-cadastro').addEventListener('click', () => {
     document.getElementById('form-cadastro-auth').classList.add('active');
     document.getElementById('form-login').classList.remove('active');
     document.getElementById('tab-cadastro').classList.add('active');
-    document.getElementById('tab-login').classList.remove('active');
+    document.getElementById('tab-login').classList.add('active');
 });
 
 // Configuração das 3 Abas do Admin
@@ -357,7 +357,6 @@ document.getElementById('form-comprovante').addEventListener('submit', async (e)
     finally { btn.innerText = "CONCLUIR INSCRIÇÃO"; btn.disabled = false; }
 });
 
-// RESTAURADO: FILTRAGEM E RENDERIZAÇÃO ORIGINAL DOS CARDS GAMER DO CLIENTE
 function ouvirCardsDoCliente(uid) {
     database.ref(`usuarios/${uid}`).on('value', snapshotUsuario => {
         gridCardsCliente.innerHTML = "";
@@ -365,12 +364,10 @@ function ouvirCardsDoCliente(uid) {
         const liberados = dadosUser.jogos_liberados || {};
         const chavesLiberadas = Object.keys(liberados);
 
-        // Se ele comprou pela primeira vez, renderiza o card padrão de análise do grid original
         if (dadosUser.status_cadastro === "comprovante_enviado" && chavesLiberadas.length === 0) {
             const cardElement = document.createElement('div');
             cardElement.className = 'game-card';
             cardElement.style.borderColor = "#00ff66";
-            // Usa a estrutura de div limpa do seu layout original para o card de carregamento
             cardElement.innerHTML = `
                 <div style="height:280px; display:flex; align-items:center; justify-content:center; background:#161c26;">
                     <span style="font-size:4rem; animation: fadeIn 1s infinite alternate;">⏳</span>
@@ -420,7 +417,7 @@ function abrirModalJogo(card) {
         textoSenhaReal.innerText = card.senha_patch.trim();
         containerSenha.style.display = "block";
         btnRevelarSenha.onclick = () => { btnRevelarSenha.style.display = "none"; areaTextoSenha.style.display = "block"; };
-        btnCopiarSenha.onclick = () => { executarCopiaGamerBlindada(textoSenhaReal.innerText, btnCopiarSenha); };
+        btnCopiarSenha.onclick = () => { executorsCopiaGamerBlindada(textoSenhaReal.innerText, btnCopiarSenha); };
     } else {
         containerSenha.style.display = "none";
     }
@@ -487,7 +484,6 @@ function ouvirEConstruirMenuCliente() {
 }
 
 function inicializarBotaoWhatsApp() {
-    // Configura o link direto da API oficial do WhatsApp usando o número do suporte
     const whatsappNumero = "5588988470190"; 
     document.getElementById('btn-whatsapp-flutuante').href = `https://api.whatsapp.com/send?phone=${whatsappNumero}&text=Ol%C3%A1,%20preciso%20de%20ajuda%20no%20Hub!`;
 }
@@ -706,6 +702,9 @@ function inicializarPainelAdmin() {
                 });
             }
 
+            // CORREÇÃO CIRÚRGICA DE INSERÇÃO CSS INLINE NAS TAGS SELECT PARA EVITAR TEXTO CORTADO (FOTO 3d57d4b1)
+            const estiloGamerSelectCorrigido = `style="width:100%; height:40px; background:#1c2434; border:1px solid #242f41; border-radius:4px; color:#fff; padding:0 10px; margin-bottom:10px; font-size:0.85rem;"`;
+
             if (filtroAdminAtual === "pendentes") {
                 const temComp = users[uid].comprovante_base64 && users[uid].comprovante_base64.length > 10;
                 const btnComp = temComp 
@@ -720,7 +719,7 @@ function inicializarPainelAdmin() {
                         <p><strong>Status Antigo:</strong> <span style="color:#00ff66">${status.toUpperCase()}</span></p>
                         ${btnComp}
                     </div>
-                    <select id="select-game-${uid}" style="margin-bottom:10px;"><option value="">-- Selecione o Novo Card para Injetar --</option></select>
+                    <select id="select-game-${uid}" ${estiloGamerSelectCorrigido}><option value="">-- Selecione o Novo Card para Injetar --</option></select>
                     <button class="btn-inject" onclick="injetarCardParaUsuario('${uid}')">Confirmar Pagamento & Mover para Aprovados</button>
                     <button class="btn-sair" onclick="deletarUsuarioDoBancoTotal('${uid}', '${users[uid].email}')" style="width:100%; font-size:0.8rem; padding:6px; margin-top:5px; background:#211212; border:1px dashed #ff3333; color:#ff5555;">🗑️ Excluir Conta permanentemente</button>
                 `;
@@ -735,17 +734,17 @@ function inicializarPainelAdmin() {
                             <ul style="margin:0; padding:0; list-style:none;">${listaJogosAtivosHtml}</ul>
                         </div>
                     </div>
-                    <div style="display:flex; gap:5px;">
-                        <select id="select-game-${uid}" style="margin:0; flex:1; height:35px;"><option value="">+ Injetar Card Extra</option></select>
-                        <button class="btn-gamer" onclick="injetarCardParaUsuario('${uid}')" style="margin:0; height:35px; width:auto; padding:0 10px;">+</button>
+                    <div style="display:flex; gap:5px; align-items:center; margin-bottom:10px;">
+                        <select id="select-game-${uid}" ${estiloGamerSelectCorrigido} style="margin:0; flex:1; height:40px;"><option value="">+ Injetar Card Extra</option></select>
+                        <button class="btn-gamer" onclick="injetarCardParaUsuario('${uid}')" style="margin:0; height:40px; width:45px; padding:0;">+</button>
                     </div>
-                    <button class="btn-sair" onclick="excluirSolicitacaoEComprovante('${uid}')" style="width:100%; font-size:0.8rem; padding:6px; margin-top:10px; background:#2d1313; border:1px solid #ff3333; color:#ff3333;">📦 Mover Manualmente para Cadastrados (Recuar)</button>
+                    <button class="btn-sair" onclick="excluirSolicitacaoEComprovante('${uid}')" style="width:100%; font-size:0.8rem; padding:6px; background:#2d1313; border:1px solid #ff3333; color:#ff3333;">📦 Mover Manualmente para Cadastrados (Recuar)</button>
                 `;
             } else {
                 let botoesAbaCadastrados = `
-                    <div style="display:flex; gap:5px;">
-                        <select id="select-game-${uid}" style="margin:0; flex:1; height:35px;"><option value="">Injetar Novo Patch Direto</option></select>
-                        <button class="btn-gamer" onclick="injetarCardParaUsuario('${uid}')" style="margin:0; height:35px; width:auto; padding:0 10px;">+</button>
+                    <div style="display:flex; gap:5px; align-items:center;">
+                        <select id="select-game-${uid}" ${estiloGamerSelectCorrigido} style="margin:0; flex:1; height:40px;"><option value="">Injetar Novo Patch Direto</option></select>
+                        <button class="btn-gamer" onclick="injetarCardParaUsuario('${uid}')" style="margin:0; height:40px; width:45px; padding:0;">+</button>
                     </div>
                 `;
 
@@ -753,7 +752,7 @@ function inicializarPainelAdmin() {
                     botoesAbaCadastrados = `
                         <div style="background:#281216; border:1px solid #ff3333; padding:10px; border-radius:4px; text-align:center;">
                             <p style="color:#ff3333; font-weight:bold; font-size:0.85rem; margin-bottom:8px;">⚠️ O USUÁRIO SOLICITOU A EXCLUSÃO DA CONTA</p>
-                            <button class="btn-gamer" style="background:#ff3333; color:#fff; font-size:0.8rem; padding:8px;" onclick="deletarUsuarioDoBancoTotal('${uid}', '${users[uid].email}')">🚨 DESSASSINAR DADOS DO BANCO TOTAL</button>
+                            <button class="btn-gamer" style="background:#ff3333; color:#fff; font-size:0.8rem; padding:8px;" onclick="deletarUsuarioDoBancoTotal('${uid}', '${users[uid].email}')">🚨 APAGAR DADOS DO BANCO TOTAL</button>
                         </div>
                     `;
                 }
@@ -807,7 +806,9 @@ function alimentarSelectComCards(selectElement, jogosJaLiberados = {}) {
 }
 
 async function injetarCardParaUsuario(uid) {
-    const selectedCardId = document.getElementById(`select-game-${uid}`).value;
+    const selectElement = document.getElementById(`select-game-${uid}`);
+    if (!selectElement) return;
+    const selectedCardId = selectElement.value;
     try {
         await database.ref(`usuarios/${uid}/status_cadastro`).set("pago");
         if (selectedCardId) {
