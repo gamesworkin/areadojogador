@@ -5,22 +5,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Área do Jogador</title>
     
-    <!-- Link do Favicon apontando para a raiz do repositório -->
     <link rel="icon" type="image/x-icon" href="fav.ico">
     
-    <!-- Link para o arquivo CSS Externo -->
     <link rel="stylesheet" href="style.css">
     
-    <!-- Scripts do Firebase (SDKs Necessários) -->
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
 </head>
 <body>
 
-    <!-- ========================================== -->
-    <!-- TELA 1: LOGIN / CADASTRO                   -->
-    <!-- ========================================== -->
     <div id="view-auth" class="view active">
         <div class="auth-container">
             <h2>ÁREA DO JOGADOR</h2>
@@ -29,20 +23,17 @@
                 <button id="tab-cadastro" class="tab-btn">Criar Conta</button>
             </div>
             
-            <!-- Formulário de Login -->
             <form id="form-login" class="auth-form active">
                 <input type="email" id="login-email" placeholder="Seu e-mail" required>
                 <input type="password" id="login-shadow-pass" placeholder="Sua senha" required>
                 <input type="hidden" id="login-senha">
                 <button type="submit" id="btn-logar" class="btn-gamer">LOGAR NO HUB</button>
                 
-                <!-- Link de Recuperação de Senha -->
                 <div class="forget-password-container">
                     <button type="button" id="btn-esqueci-senha" class="btn-link">Esqueci minha senha</button>
                 </div>
             </form>
 
-            <!-- Formulário de Cadastro -->
             <form id="form-cadastro-auth" class="auth-form">
                 <input type="text" id="cad-nome" placeholder="Nome" required>
                 <input type="text" id="cad-sobrenome" placeholder="Sobrenome" required>
@@ -54,9 +45,6 @@
         </div>
     </div>
 
-    <!-- ========================================== -->
-    <!-- TELA 2: DASHBOARD DO CLIENTE               -->
-    <!-- ========================================== -->
     <div id="view-cliente" class="view">
         <header class="app-header">
             <span>Jogador: <strong id="user-display-name">...</strong></span>
@@ -68,19 +56,15 @@
 
         <div class="container">
             
-            <!-- MENU HORIZONTAL SUSPENSO DINÂMICO -->
             <nav id="area-menu-dinamico" class="nav-dinamica-container">
                 <ul id="container-links-menu" class="nav-dinamica-list"></ul>
             </nav>
 
-            <!-- Central de Compras Inteligente Dinâmica (Vitrine de Vendas Ativa) -->
             <div id="area-compra-pendente" class="box-alerta" style="display: none; max-width: 100%; width: 100%;">
                 <h3 id="texto-alerta-titulo" style="margin-bottom: 15px;">🛒 Patches Disponíveis para Adquirir</h3>
                 
-                <!-- Grid de Cards de Vitrine para Compra -->
                 <div id="grid-vitrine-vendas" class="grid-cards" style="margin-bottom: 20px;"></div>
                 
-                <!-- Caixa de Chave Pix Geral de Backup -->
                 <div id="caixa-pix-geral-backup" style="background: #161c26; border: 1px solid #242f41; padding: 12px; border-radius: 6px; max-width: 340px; margin: 0 auto 10px auto; display: flex; align-items: center; justify-content: space-between; gap: 10px;">
                     <div style="text-align: left;">
                         <span style="font-size: 0.75rem; color: #8899a6; display: block; text-transform: uppercase; letter-spacing: 0.5px;">Chave PIX Geral:</span>
@@ -91,7 +75,6 @@
                 <p id="texto-alerta-desc" style="font-size: 0.8rem; color: #8899a6;">Selecione um patch acima para ver detalhes e enviar o comprovante.</p>
             </div>
 
-            <!-- MODAL INTERNO: FORMULÁRIO DE ENVIO -->
             <div id="modal-formulario-envio" class="modal-form">
                 <div class="modal-form-content">
                     <div class="modal-form-header">
@@ -103,7 +86,6 @@
                         <input type="hidden" id="id-card-escolhido-compra" value="">
                         <p class="instrucao">Faça o upload do seu comprovante PIX no valor de <strong id="texto-preco-modal-checkout">R$ 10,00</strong> para liberação imediata do patch.</p>
                         
-                        <!-- Caixa Copiar Pix dentro do Formulário de Envio -->
                         <div style="background: #0b0e14; border: 1px solid #242f41; padding: 12px; border-radius: 6px; margin-bottom: 15px; display: flex; align-items: center; justify-content: space-between; gap: 10px; text-align: left;">
                             <div>
                                 <span style="font-size: 0.7rem; color: #8899a6; display: block; text-transform: uppercase;">Chave PIX para este Jogo:</span>
@@ -123,14 +105,12 @@
                 </div>
             </div>
 
-            <!-- HUB DE JOGOS LIBERADOS -->
             <main class="hub-jogos">
                 <h2>Seus Jogos Liberados</h2>
                 <div id="grid-cards-cliente" class="grid-cards"></div>
             </main>
         </div>
 
-        <!-- BOTÃO FLUTUANTE EXATO DO WHATSAPP -->
         <a id="btn-whatsapp-flutuante" href="#" target="_blank" class="whatsapp-btn-float" style="position:fixed; bottom:20px; right:20px; background:#25d366; width:60px; height:60px; border-radius:50%; display:flex; align-items:center; justify-content:center; box-shadow:0 4px 12px rgba(0,0,0,0.4); z-index:9999; transition:transform 0.2s;">
             <svg xmlns="http://www.w3.org/2000/svg" width="34" height="34" fill="#fff" viewBox="0 0 24 24">
                 <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946C.06 5.348 5.397 0 11.948 0c3.179.001 6.161 1.24 8.413 3.488 2.254 2.248 3.492 5.232 3.491 8.409-.003 6.585-5.341 11.931-11.892 11.931-2.006-.001-3.98-.507-5.732-1.469L0 24zm6.59-4.846c1.666.988 3.311 1.494 5.302 1.495 5.482 0 9.941-4.444 9.943-9.916.002-2.651-1.026-5.143-2.895-7.014C17.069 1.84 14.584 1.81 11.948 1.81c-5.486 0-9.944 4.444-9.947 9.917-.001 2.012.529 3.978 1.536 5.671L2.38 21.724l4.267-1.57zM17.475 14.393c-.3-.149-1.776-.875-2.05-.974-.275-.099-.475-.149-.675.149-.199.299-.775.974-.95 1.173-.175.199-.349.224-.649.075-.3-.149-1.266-.466-2.41-1.484-.891-.795-1.492-1.779-1.666-2.079-.175-.3-.019-.461.13-.61.135-.133.3-.349.45-.523.15-.174.2-.299.3-.498.1-.199.05-.374-.025-.523-.075-.149-.675-1.623-.924-2.222-.244-.588-.493-.508-.675-.518-.174-.01-.374-.012-.574-.012-.2 0-.525.075-.8.374-.275.299-1.05 1.026-1.05 2.502 0 1.475 1.075 2.899 1.225 3.098.15.199 2.115 3.23 5.125 4.532.715.308 1.274.493 1.709.631.718.228 1.37.196 1.885.119.574-.085 1.776-.726 2.025-1.424.25-.699.25-1.299.175-1.424-.075-.125-.275-.199-.575-.349z"/>
@@ -138,9 +118,6 @@
         </a>
     </div>
 
-    <!-- ========================================== -->
-    <!-- TELA AUXILIAR: AVISO DE EXCLUSÃO           -->
-    <!-- ========================================== -->
     <div id="view-cliente-bloqueado" class="view">
         <div class="auth-container" style="text-align: center; border-color: #ff3333;">
             <h2 style="color: #ff3333; margin-bottom: 15px;">Conta em Exclusão</h2>
@@ -151,9 +128,6 @@
         </div>
     </div>
 
-    <!-- ========================================== -->
-    <!-- TELA LAYOUT MODAL: EDITAR PERFIL           -->
-    <!-- ========================================== -->
     <div id="modal-editar-perfil" class="modal-form">
         <div class="modal-form-content">
             <div class="modal-form-header">
@@ -179,9 +153,6 @@
         </div>
     </div>
 
-    <!-- ========================================== -->
-    <!-- TELA 3: PAINEL ADMINISTRATIVO              -->
-    <!-- ========================================== -->
     <div id="view-admin" class="view">
         <header class="app-header">
             <h2>PAINEL DE CONTROLE ADMIN</h2>
@@ -197,7 +168,6 @@
                     <input type="url" id="card-capa" placeholder="URL da Imagem da Capa" required>
                     <textarea id="card-descricao" placeholder="Descrição/Informações do Jogo" rows="3" required></textarea>
                     
-                    <!-- NOVOS CAMPOS ADICIONADOS: VALOR E CHAVE PIX DO CARD -->
                     <h4>Comercialização do Patch</h4>
                     <div class="link-group">
                         <input type="text" id="card-preco" placeholder="Preço do Patch (Ex: R$ 10,00)" required>
@@ -233,7 +203,6 @@
                     </div>
                 </form>
 
-                <!-- CONSTRUTOR VISUAL -->
                 <div class="admin-menu-json-box">
                     <h3>2. Construtor Visual do Menu Horizontal</h3>
                     <div id="construtor-menu-visual-container"></div>
@@ -252,7 +221,6 @@
                 </div>
             </section>
 
-            <!-- Controle do Admin -->
             <section class="admin-box">
                 <h3>3. Controle de Usuários e Pedidos</h3>
                 <div class="tabs" style="margin-bottom:15px; background: #0b0e14; padding: 5px; border-radius:6px; display: flex; gap: 2px;">
@@ -270,59 +238,54 @@
         </div>
     </div>
 
-    <!-- JANELA FLUTUANTE MODAL REESTRUTURADA -->
-    <div id="modal-detalhes-jogo" class="modal-jogos">
-        <div class="modal-content" style="background:#121824; border:1px solid #242f41; border-radius:8px; width:95%; max-width:750px; overflow:hidden; padding:0;">
-            <div style="display:flex; flex-direction:row; flex-wrap:wrap; width:100%;">
-                
-                <!-- Coluna Esquerda: Capa Vertical Mantida Intacta -->
-                <div style="flex:1 1 280px; background:#0b0e14; display:flex; align-items:center; justify-content:center; padding:10px;">
-                    <img id="modal-jogo-capa" src="" alt="Capa" style="width:100%; max-width:260px; height:auto; object-fit:contain; border-radius:6px; box-shadow:0 4px 15px rgba(0,0,0,0.6);">
-                </div>
-                
-                <!-- Coluna Direita: Informações, Links e Chave Secreta -->
-                <div class="modal-info" style="flex:1.2 1 340px; padding:25px; display:flex; flex-direction:column; justify-content:space-between; background:#121824; position:relative;">
-                    <span class="close-modal" onclick="fecharModalJogo()" style="position:absolute; top:15px; right:20px; font-size:1.8rem; cursor:pointer; color:#fff; z-index:10;">&times;</span>
+    <div id="modal-details-container-gamer">
+        <div id="modal-detalhes-jogo" class="modal-jogos">
+            <div class="modal-content" style="background:#121824; border:1px solid #242f41; border-radius:8px; width:95%; max-width:750px; overflow:hidden; padding:0;">
+                <div style="display:flex; flex-direction:row; flex-wrap:wrap; width:100%;">
                     
-                    <div style="margin-top:10px;">
-                        <h3 id="modal-jogo-titulo" style="font-size:1.5rem; color:#fff; font-weight:bold; margin-bottom:15px; border-bottom:1px solid #242f41; padding-bottom:10px;">Título</h3>
-                        <p id="modal-jogo-descricao" style="color:#8899a6; font-size:0.9rem; line-height:1.6; margin-bottom:20px; max-height:140px; overflow-y:auto; padding-right:5px; text-align:justify;">Descrição</p>
+                    <div style="flex:1 1 280px; background:#0b0e14; display:flex; align-items:center; justify-content:center; padding:10px;">
+                        <img id="modal-jogo-capa" src="" alt="Capa" style="width:100%; max-width:260px; height:auto; object-fit:contain; border-radius:6px; box-shadow:0 4px 15px rgba(0,0,0,0.6);">
                     </div>
                     
-                    <div>
-                        <!-- CONTAINER DE EXIBIÇÃO DE SENHA PROTEGIDA -->
-                        <div id="container-senha-protegida-modal" style="margin-bottom:20px; background:#161c26; border:1px solid #242f41; padding:15px; border-radius:6px; text-align:center;">
-                            <button type="button" id="btn-revelar-senha-modal" class="btn-download-dinamico" style="margin:0; width:100%; font-size:0.85rem; border-color:#00ff66; color:#00ff66; border-radius:4px;">🔑 Exibir Senha do Patch</button>
-                            <div id="area-texto-senha-secreta" style="display: none; margin-top:5px; background:#0b0e14; padding:10px; border-radius:4px; border:1px solid #242f41;">
-                                <span style="font-size:0.75rem; color:#8899a6; display:block; text-transform:uppercase; margin-bottom:4px; letter-spacing:0.5px;">Senha de Extração:</span>
-                                <strong id="texto-senha-secreta-real" style="color:#00ff66; font-size:1.25rem; letter-spacing:1px; display:block; margin-bottom:8px; font-family:monospace;">---</strong>
-                                <button type="button" id="btn-copiar-senha-modal" class="btn-gamer" style="height:32px; padding:0 15px; font-size:0.8rem; width:auto; display:inline-flex; align-items:center; justify-content:center; border-radius:4px; text-transform:none; letter-spacing:0.5px;">📋 Copiar Chave</button>
-                            </div>
+                    <div class="modal-info" style="flex:1.2 1 340px; padding:25px; display:flex; flex-direction:column; justify-content:space-between; background:#121824; position:relative;">
+                        <span class="close-modal" onclick="fecharModalJogo()" style="position:absolute; top:15px; right:20px; font-size:1.8rem; cursor:pointer; color:#fff; z-index:10;">&times;</span>
+                        
+                        <div style="margin-top:10px;">
+                            <h3 id="modal-jogo-titulo" style="font-size:1.5rem; color:#fff; font-weight:bold; margin-bottom:15px; border-bottom:1px solid #242f41; padding-bottom:10px;">Título</h3>
+                            <p id="modal-jogo-descricao" style="color:#8899a6; font-size:0.9rem; line-height:1.6; margin-bottom:20px; max-height:160px; overflow-y:auto; padding-right:5px; text-align:justify;">Descrição</p>
                         </div>
-
-                        <!-- CONTAINER ADAPTATIVO DINÂMICO PARA COMPRA COM DADOS INTERNOS DO CARD -->
-                        <div id="container-botoes-acao-modal">
-                            <div id="modal-jogo-botoes" class="area-botoes-download" style="display:flex; flex-direction:column; gap:10px;"></div>
-                            
-                            <!-- Bloco de Cópia da Chave PIX Dinâmica dentro da Preview do Card -->
-                            <div id="bloco-pix-dinamico-preview" style="display:none; background:#0b0e14; border:1px solid #242f41; padding:10px; border-radius:6px; margin-bottom:12px; text-align:left;">
-                                <span style="font-size:0.7rem; color:#8899a6; display:block; text-transform:uppercase; margin-bottom:2px;">Chave PIX deste Patch:</span>
-                                <div style="display:flex; align-items:center; justify-content:between; gap:10px;">
-                                    <strong id="texto-pix-dinamico-preview-real" style="color:#00ff66; font-size:0.9rem; font-family:monospace; word-break:break-all; flex:1;">---</strong>
-                                    <button type="button" id="btn-copiar-pix-preview-dinamico" class="btn-download-dinamico" style="margin:0; padding:4px 8px; font-size:0.7rem; height:28px;">📋 Copiar</button>
+                        
+                        <div>
+                            <div id="container-senha-protegida-modal" style="margin-bottom:20px; background:#161c26; border:1px solid #242f41; padding:15px; border-radius:6px; text-align:center;">
+                                <button type="button" id="btn-revelar-senha-modal" class="btn-download-dinamico" style="margin:0; width:100%; font-size:0.85rem; border-color:#00ff66; color:#00ff66; border-radius:4px;">🔑 Exibir Senha do Patch</button>
+                                <div id="area-texto-senha-secreta" style="display: none; margin-top:5px; background:#0b0e14; padding:10px; border-radius:4px; border:1px solid #242f41;">
+                                    <span style="font-size:0.75rem; color:#8899a6; display:block; text-transform:uppercase; margin-bottom:4px; letter-spacing:0.5px;">Senha de Extração:</span>
+                                    <strong id="texto-senha-secreta-real" style="color:#00ff66; font-size:1.25rem; letter-spacing:1px; display:block; margin-bottom:8px; font-family:monospace;">---</strong>
+                                    <button type="button" id="btn-copiar-senha-modal" class="btn-gamer" style="height:32px; padding:0 15px; font-size:0.8rem; width:auto; display:inline-flex; align-items:center; justify-content:center; border-radius:4px; text-transform:none; letter-spacing:0.5px;">📋 Copiar Chave</button>
                                 </div>
                             </div>
 
-                            <button type="button" id="btn-adquirir-patch-vitrine" class="btn-gamer" style="width:100%; display:none; background: linear-gradient(135deg, #00ff66 0%, #00aa44 100%); color:#000;">🛒 ADQUIRIR ESTE PATCH (<span id="texto-preco-botao-dinamico">R$ 10,00</span>)</button>
+                            <div id="container-botoes-acao-modal">
+                                <div id="modal-jogo-botoes" class="area-botoes-download" style="display:flex; flex-direction:column; gap:10px;"></div>
+                                
+                                <div id="bloco-pix-dinamico-preview" style="display:none; background:#0b0e14; border:1px solid #242f41; padding:10px; border-radius:6px; margin-bottom:12px; text-align:left;">
+                                    <span style="font-size:0.7om; color:#8899a6; display:block; text-transform:uppercase; margin-bottom:2px;">Chave PIX deste Patch:</span>
+                                    <div style="display:flex; align-items:center; justify-content:between; gap:10px;">
+                                        <strong id="texto-pix-dinamico-preview-real" style="color:#00ff66; font-size:0.9rem; font-family:monospace; word-break:break-all; flex:1;">---</strong>
+                                        <button type="button" id="btn-copiar-pix-preview-dinamico" class="btn-download-dinamico" style="margin:0; padding:4px 8px; font-size:0.7rem; height:28px;">📋 Copiar</button>
+                                    </div>
+                                </div>
+
+                                <button type="button" id="btn-adquirir-patch-vitrine" class="btn-gamer" style="width:100%; display:none; background: linear-gradient(135deg, #00ff66 0%, #00aa44 100%); color:#000;">🛒 ADQUIRIR ESTE PATCH (<span id="texto-preco-botao-dinamico">R$ 10,00</span>)</button>
+                            </div>
                         </div>
                     </div>
+                    
                 </div>
-                
             </div>
         </div>
     </div>
 
-    <!-- Script lógico -->
     <script src="script.js"></script>
 </body>
 </html>
