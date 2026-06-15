@@ -16,7 +16,6 @@ body {
     flex-direction: column;
 }
 
-/* Telas do App */
 .view {
     display: none;
     width: 100%;
@@ -118,7 +117,6 @@ body {
     color: #00ff66;
 }
 
-/* Botão Estilo Gamer Padrão */
 .btn-gamer {
     background: linear-gradient(135deg, #00ff66 0%, #00aa44 100%);
     color: #02060d;
@@ -185,65 +183,6 @@ body {
     flex: 1;
 }
 
-/* ==========================================================================
-   NOVO CONTAINER DE PATCHS DISPONÍVEIS (BORDAS AMARELAS ENFATIZADAS)
-   ========================================================================== */
-.box-alerta-amarela {
-    background: #0e131f !important;
-    border: 2px solid #ffcc00 !important;
-    border-radius: 8px;
-    padding: 0 !important;
-    margin-bottom: 25px;
-    overflow: hidden;
-    box-shadow: 0 0 15px rgba(255, 204, 0, 0.2);
-    transition: all 0.3s ease;
-}
-
-.header-expansivel {
-    background: linear-gradient(90deg, #161d2f 0%, #0e131f 100%);
-    padding: 15px 20px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    cursor: pointer;
-    user-select: none;
-    border-bottom: 1px solid #242f41;
-}
-
-.header-expansivel h3 {
-    margin: 0 !important;
-    color: #ffcc00 !important;
-    font-size: 1.1rem !important;
-    font-weight: 800 !important;
-    letter-spacing: 1px;
-    text-transform: uppercase;
-}
-
-.seta-icone {
-    color: #ffcc00;
-    font-size: 1.1rem;
-    transition: transform 0.3s ease;
-}
-
-.conteudo-expansivel {
-    max-height: 0;
-    opacity: 0;
-    padding: 0 20px;
-    overflow: hidden;
-    transition: max-height 0.4s ease, opacity 0.3s ease, padding 0.4s ease;
-}
-
-.conteudo-expansivel.aberto {
-    max-height: 3000px; 
-    opacity: 1;
-    padding: 15px 20px 25px 20px;
-}
-
-.header-expansivel:hover {
-    background: #1c253c;
-}
-
-/* Box alerta padrão para mensagens de análise de pagamento */
 .box-alerta {
     background: #131a26;
     border: 1px solid #242f41;
@@ -705,7 +644,7 @@ body {
 }
 
 /* ==========================================================================
-   REGRAS RESPONSIVAS E CORREÇÃO DO LAYOUT MOBILE (FOTO 1000377257.jpg)
+   REGRAS RESPONSIVAS E ALINHAMENTO DO MOSAICO MOBILE
    ========================================================================== */
 @media (max-width: 900px) {
     .admin-grid {
@@ -721,7 +660,7 @@ body {
         margin: 15px auto;
     }
     
-    /* CORREÇÃO DO SELETOR: Mudado de .grid-template-columns para .grid-cards */
+    /* Configuração perfeita do Mosaico gamer de 3 cards em cada linha */
     .grid-cards {
         grid-template-columns: repeat(3, 1fr) !important;
         gap: 8px !important;
@@ -752,7 +691,7 @@ body {
         right: 5px !important;
     }
 
-    /* CORREÇÃO DO PREVIEW FLUTUANTE EM CELULARES */
+    /* Correção de tamanho proporcional da Preview no celular (Evita vazar tela) */
     .modal-jogos .modal-content {
         max-height: 85vh !important;
         display: flex !important;
