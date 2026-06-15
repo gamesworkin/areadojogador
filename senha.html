@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StreamHub - Chave de Descompactação</title>
+    
+    <link rel="icon" type="image/x-icon" href="fav.ico">
+    
+    <link rel="stylesheet" href="style.css">
+
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: #05070a;
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        /* Espaço de exibição interativo e limpo */
+        .premium-viewport {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 2;
+        }
+
+        #particle-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+            pointer-events: none;
+        }
+
+        /* Container central flutuante livre de caixas pesadas */
+        .content-flow {
+            position: relative;
+            z-index: 3;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            max-width: 600px;
+            padding: 20px;
+        }
+
+        .header-subtitle {
+            color: #556673;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            margin-bottom: 30px;
+            font-weight: 600;
+            animation: fadeInSlow 1.5s ease;
+        }
+
+        /* Animação e estilo da Senha se Materializando */
+        .senha-stream {
+            font-size: 2.4rem;
+            font-weight: 900;
+            letter-spacing: 6px;
+            color: #ffffff;
+            text-shadow: 0 0 20px rgba(0, 255, 102, 0.6), 0 0 40px rgba(0, 255, 102, 0.2);
+            opacity: 0;
+            transform: scale(0.95);
+            transition: all 1.5s cubic-bezier(0.075, 0.82, 0.165, 1);
+            margin: 20px 0;
+            display: none; /* Começa totalmente invisível na lógica */
+            user-select: none;
+        }
+
+        .senha-stream.revelada {
+            display: block;
+            opacity: 1;
+            transform: scale(1);
+            color: #00ff66;
+        }
+
+        /* Botões Concisos, Delicados e Premium */
+        .btn-premium-trigger {
+            background: transparent;
+            color: #00ff66;
+            border: 1px solid rgba(0, 255, 102, 0.3);
+            padding: 10px 24px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.4s ease;
+            box-shadow: 0 0 15px rgba(0, 255, 102, 0.05);
+        }
+
+        .btn-premium-trigger:hover:not(:disabled) {
+            border-color: #00ff66;
+            background: rgba(0, 255, 102, 0.05);
+            box-shadow: 0 0 25px rgba(0, 255, 102, 0.2);
+            text-shadow: 0 0 8px rgba(0, 255, 102, 0.5);
+        }
+
+        .btn-premium-trigger:disabled {
+            color: #445566;
+            border-color: rgba(68, 85, 102, 0.2);
+            cursor: default;
+        }
+
+        .btn-premium-copy {
+            background: transparent;
+            color: #ffffff;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            padding: 8px 18px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            border-radius: 50px;
+            cursor: pointer;
+            opacity: 0;
+            transform: translateY(10px);
+            pointer-events: none;
+            transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .btn-premium-copy.show {
+            opacity: 0.7;
+            transform: translateY(0);
+            pointer-events: auto;
+        }
+
+        .btn-premium-copy.show:hover {
+            opacity: 1;
+            border-color: #ffaa00;
+            color: #ffaa00;
+            box-shadow: 0 0 15px rgba(255, 170, 0, 0.15);
+        }
+
+        @keyframes fadeInSlow {
+            from { opacity: 0; transform: translateY(-5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="premium-viewport">
+        <canvas id="particle-canvas"></canvas>
+
+        <div class="content-flow">
+            <div class="header-subtitle">Chave de Segurança Originária</div>
+            
+            <button id="btn-revelar-premium" class="btn-premium-trigger">Revelar Senha do Patch</button>
+            
+            <div id="senha-alvo" class="senha-stream">BOMBA_PATCH_2026</div>
+
+            <div style="margin-top: 25px; min-height: 35px;">
+                <button id="btn-copiar-premium" class="btn-premium-copy">📋 Copiar Chave</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById("particle-canvas");
+        const ctx = canvas.getContext("2d");
+        
+        let particlesArray = [];
+        let estadoEfeito = "normal"; // normal, atrair, orbitar
+        let maxParticulas = 60;
+
+        function redimensionar() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        window.addEventListener("resize", redimensionar);
+        redimensionar();
+
+        class ParticulaPremium {
+            constructor() {
+                this.reset();
+            }
+
+            reset() {
+                this.x = Math.random() * canvas.width;
+                this.y = Math.random() * canvas.height;
+                this.size = Math.random() * 1.5 + 0.5;
+                this.speedX = Math.random() * 0.4 - 0.2;
+                this.speedY = -(Math.random() * 0.5 + 0.1);
+                this.alpha = Math.random() * 0.5 + 0.2;
+                this.angle = Math.random() * Math.PI * 2;
+                this.spinSpeed = Math.random() * 0.02 - 0.01;
+                this.radiusDistance = Math.random() * 120 + 40;
+            }
+
+            update() {
+                const centroX = canvas.width / 2;
+                const centroY = canvas.height / 2;
+
+                if (estadoEfeito === "normal") {
+                    this.y += this.speedY;
+                    this.x += this.speedX;
+                    if (this.y < 0) {
+                        this.y = canvas.height;
+                        this.x = Math.random() * canvas.width;
+                    }
+                } 
+                else if (estadoEfeito === "atrair") {
+                    this.x += (centroX - this.x) * 0.06;
+                    this.y += (centroY - this.y) * 0.06;
+                    this.size = Math.random() * 2.5 + 1;
+                    this.alpha = 0.9;
+                } 
+                else if (estadoEfeito === "orbitar") {
+                    this.angle += this.spinSpeed * 2;
+                    this.x += ((centroX + Math.cos(this.angle) * this.radiusDistance) - this.x) * 0.05;
+                    this.y += ((centroY + Math.sin(this.angle) * this.radiusDistance * 0.4) - this.y) * 0.05;
+                    this.size = Math.random() * 2 + 0.5;
+                    this.alpha = Math.random() * 0.4 + 0.4;
+                }
+            }
+
+            draw() {
+                ctx.fillStyle = `rgba(0, 255, 102, ${this.alpha})`;
+                ctx.shadowBlur = estadoEfeito !== "normal" ? 12 : 0;
+                ctx.shadowColor = "#00ff66";
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        function init() {
+            particlesArray = [];
+            for (let i = 0; i < maxParticulas; i++) {
+                particlesArray.push(new ParticulaPremium());
+            }
+        }
+        init();
+
+        function rodarLoop() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.shadowBlur = 0;
+            for (let i = 0; i < particlesArray.length; i++) {
+                particlesArray[i].update();
+                particlesArray[i].draw();
+            }
+            requestAnimationFrame(rodarLoop);
+        }
+        rodarLoop();
+
+        // ==========================================================================
+        // GATILHO DA REVELAÇÃO MAGNÉTICA
+        // ==========================================================================
+        const btnRevelar = document.getElementById("btn-revelar-premium");
+        const senhaAlvo = document.getElementById("senha-alvo");
+        const btnCopiar = document.getElementById("btn-copiar-premium");
+
+        btnRevelar.addEventListener("click", () => {
+            btnRevelar.disabled = true;
+            btnRevelar.style.opacity = "0";
+            
+            // Inicia compressão magnética de partículas
+            estadoEfeito = "atrair";
+            maxParticulas = 180; 
+            init();
+
+            setTimeout(() => {
+                btnRevelar.style.display = "none";
+                senhaAlvo.classList.add("revelada");
+                
+                // Transiciona para órbita suave em volta da palavra formada
+                estadoEfeito = "orbitar";
+                
+                setTimeout(() => {
+                    btnCopiar.classList.add("show");
+                }, 400);
+
+            }, 1200); // Tempo otimizado para a convergência fluida
+        });
+
+        // Copiar Chave
+        btnCopiar.addEventListener("click", () => {
+            navigator.clipboard.writeText(senhaAlvo.innerText).then(() => {
+                const textOrig = btnCopiar.innerText;
+                btnCopiar.innerText = "✅ Copiada";
+                btnCopiar.style.borderColor = "#00ff66";
+                btnCopiar.style.color = "#00ff66";
+                
+                setTimeout(() => {
+                    btnCopiar.innerText = textOrig;
+                    btnCopiar.style.borderColor = "rgba(255, 255, 255, 0.15)";
+                    btnCopiar.style.color = "#ffffff";
+                }, 2000);
+            });
+        });
+
+        // Proteções de botão direito
+        document.addEventListener('contextmenu', (e) => { e.preventDefault(); return false; });
+    </script>
+</body>
+</html>
