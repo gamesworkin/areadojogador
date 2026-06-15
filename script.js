@@ -88,7 +88,7 @@ document.getElementById('tab-cadastro').addEventListener('click', () => {
     document.getElementById('form-cadastro-auth').classList.add('active');
     document.getElementById('form-login').classList.remove('active');
     document.getElementById('tab-cadastro').classList.add('active');
-    document.getElementById('tab-login').classList.add('active');
+    document.getElementById('tab-login').classList.remove('active');
 });
 
 // Configuração das 3 Abas do Admin
@@ -198,11 +198,11 @@ function verificarSeTemCardNaoAdquirido(jogosLiberadosUsuario) {
 function deslogar() { auth.signOut().then(() => location.reload()); }
 
 function executarCopiaGamerBlindada(textoParaCopiar, elementoBotao) {
-    const textoOriginal = elementoBotao.innerText;
+    const textoOriginal = elementoBotao.innerHTML;
     if (navigator.clipboard && window.isSecureContext) {
         navigator.clipboard.writeText(textoParaCopiar).then(() => {
-            elementoBotao.innerText = "✅ Copiado";
-            setTimeout(() => { elementoBotao.innerText = textoOriginal; }, 2000);
+            elementoBotao.innerHTML = "✅ Copiado";
+            setTimeout(() => { elementoBotao.innerHTML = textoOriginal; }, 2000);
         }).catch(() => executarMetodoCopiaAntigo(textoParaCopiar, elementoBotao, textoOriginal));
     } else {
         executarMetodoCopiaAntigo(textoParaCopiar, elementoBotao, textoOriginal);
@@ -215,9 +215,9 @@ function executarMetodoCopiaAntigo(texto, botao, textoOrig) {
     textarea.style.position = "fixed"; textarea.style.opacity = "0";
     document.body.appendChild(textarea);
     textarea.select();
-    try { document.execCommand("copy"); botao.innerText = "✅ Copiado"; } catch (err) {}
+    try { document.execCommand("copy"); botao.innerHTML = "✅ Copiado"; } catch (err) {}
     document.body.removeChild(textarea);
-    setTimeout(() => { botao.innerText = textoOrig; }, 2000);
+    setTimeout(() => { botao.innerHTML = textoOrig; }, 2000);
 }
 
 function configurarCopiaPixPainel() {
@@ -317,46 +317,6 @@ document.getElementById('btn-esqueci-senha').addEventListener('click', async () 
     } catch (error) { alert("Erro: " + error.message); }
 });
 
-// Envio de Comprovante
-document.getElementById('btn-abrir-formulario').addEventListener('click', () => modalFormEnvio.classList.add('active'));
-document.getElementById('btn-fechar-form').addEventListener('click', () => modalFormEnvio.classList.remove('active'));
-
-const inputComprovante = document.getElementById('comprovante');
-const dropZone = document.getElementById('drop-zone');
-const fileInfo = document.getElementById('file-info');
-dropZone.addEventListener('click', () => inputComprovante.click());
-inputComprovante.addEventListener('change', (e) => verificarArquivo(e.target.files[0]));
-
-function verificarArquivo(file) {
-    if (!file) return;
-    if (file.size > 1048576) { alert("Arquivo maior que 1MB."); inputComprovante.value = ""; return; }
-    fileInfo.innerHTML = `✅ Selecionado: <strong>${file.name}</strong>`;
-}
-
-const converterBase64 = (file) => {
-    return new Promise((resolve, reject) => {
-        const reader = new FileReader(); reader.readAsDataURL(file);
-        reader.onload = () => resolve(reader.result); reader.onerror = (err) => reject(err);
-    });
-};
-
-document.getElementById('form-comprovante').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const arquivo = inputComprovante.files[0];
-    if (!arquivo) return alert("Anexe o arquivo!");
-    const btn = document.getElementById('btn-enviar-tudo');
-    btn.innerText = "ENVIANDO..."; btn.disabled = true;
-    try {
-        const base64Str = await converterBase64(arquivo);
-        let base64Final = arquivo.type === "application/pdf" ? base64Str : base64Str.slice(0, 49000);
-        await database.ref(`usuarios/${usuarioLogadoUid}/comprovante_base64`).set(base64Final);
-        await database.ref(`usuarios/${usuarioLogadoUid}/status_cadastro`).set("comprovante_enviado");
-        alert("🚀 Comprovante enviado com sucesso! Aguarde a liberação do administrador.");
-        modalFormEnvio.classList.remove('active');
-    } catch (error) { alert("Erro: " + error.message); }
-    finally { btn.innerText = "CONCLUIR INSCRIÇÃO"; btn.disabled = false; }
-});
-
 function ouvirCardsDoCliente(uid) {
     database.ref(`usuarios/${uid}`).on('value', snapshotUsuario => {
         gridCardsCliente.innerHTML = "";
@@ -417,7 +377,8 @@ function abrirModalJogo(card) {
         textoSenhaReal.innerText = card.senha_patch.trim();
         containerSenha.style.display = "block";
         btnRevelarSenha.onclick = () => { btnRevelarSenha.style.display = "none"; areaTextoSenha.style.display = "block"; };
-        btnCopiarSenha.onclick = () => { executorsCopiaGamerBlindada(textoSenhaReal.innerText, btnCopiarSenha); };
+        // CONSERTO DE DIGITAÇÃO AQUI: Chamada correta da função executando perfeitamente
+        btnCopiarSenha.onclick = () => { executarCopiaGamerBlindada(textoSenhaReal.innerText, btnCopiarSenha); };
     } else {
         containerSenha.style.display = "none";
     }
@@ -583,7 +544,7 @@ document.getElementById('btn-salvar-visual-menu').addEventListener('click', asyn
     if (!dadosValidos) { alert("⚠️ Existem campos incompletos no construtor."); return; }
     try {
         await database.ref('configuracao_menu_json').set(estruturaMenuFinal.length > 0 ? JSON.stringify(estruturaMenuFinal, null, 2) : "");
-        alert("🚀 Menu Horizontal atualizado com sucesso!");
+        alert("🚀 Menu Horizontal updated com sucesso!");
     } catch (e) { alert("Erro: " + e.message); }
 });
 
@@ -661,9 +622,6 @@ document.getElementById('btn-exportar-cards').addEventListener('click', () => {
     });
 });
 
-// ==========================================================================
-// PAINEL ADMINISTRATIVO: MOTOR DO SISTEMA QUALIFICADO DE 3 ABAS HISTÓRICAS
-// ==========================================================================
 function inicializarPainelAdmin() {
     database.ref('usuarios').on('value', snapshot => {
         listaUsuariosAdmin.innerHTML = ""; const users = snapshot.val();
@@ -702,7 +660,6 @@ function inicializarPainelAdmin() {
                 });
             }
 
-            // CORREÇÃO CIRÚRGICA DE INSERÇÃO CSS INLINE NAS TAGS SELECT PARA EVITAR TEXTO CORTADO (FOTO 3d57d4b1)
             const estiloGamerSelectCorrigido = `style="width:100%; height:40px; background:#1c2434; border:1px solid #242f41; border-radius:4px; color:#fff; padding:0 10px; margin-bottom:10px; font-size:0.85rem;"`;
 
             if (filtroAdminAtual === "pendentes") {
@@ -815,7 +772,7 @@ async function injetarCardParaUsuario(uid) {
             await database.ref(`usuarios/${uid}/jogos_liberados/${selectedCardId}`).set(true);
             alert("🔥 Sucesso! Jogador movido para Aprovados!");
         } else {
-            alert("Status atualizado para PAGO!");
+            alert("Status updated para PAGO!");
         }
     } catch (error) { alert("Erro: " + error.message); }
 }
