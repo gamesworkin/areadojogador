@@ -141,32 +141,18 @@ auth.onAuthStateChanged(user => {
 
                     document.getElementById('user-display-name').innerText = `${dados.nome} ${dados.sobrenome}`;
                     
-                    const temCardDisponivelParaComprar = await verificarSeTemCardNaoAdquirido(dados.jogos_liberados || {});
                     const areaPendente = document.getElementById('area-compra-pendente');
-                    const btnAbrirForm = document.getElementById('btn-abrir-formulario');
 
-                    if (!temCardDisponivelParaComprar) {
-                        areaPendente.style.display = "none";
-                    } else {
+                    if (dados.status_cadastro === "comprovante_enviado") {
                         areaPendente.style.display = "block";
-                        
-                        if (dados.status_cadastro === "comprovante_enviado") {
-                            document.getElementById('texto-alerta-titulo').innerText = "⏳ Comprovante em Análise";
-                            document.getElementById('texto-alerta-desc').innerText = "Seu comprovante foi enviado com sucesso. Aguarde a validação do administrador.";
-                            btnAbrirForm.style.display = "none";
-                        } else if (dados.status_cadastro === "pago") {
-                            document.getElementById('texto-alerta-titulo').innerText = "Novas Versões Disponíveis!";
-                            document.getElementById('texto-alerta-desc').innerText = "Deseja garantir os novos patches lançados? Clique abaixo!";
-                            btnAbrirForm.innerText = "Realizar nova compra";
-                            btnAbrirForm.className = "btn-gamer btn-nova-compra";
-                            btnAbrirForm.style.display = "inline-block";
-                        } else {
-                            document.getElementById('texto-alerta-titulo').innerText = "Garanta as Novas Atualizações!";
-                            document.getElementById('texto-alerta-desc').innerText = "Envie o seu novo comprovante PIX para liberar os patches recentes no seu painel.";
-                            btnAbrirForm.innerText = "Adquirir Lançamento";
-                            btnAbrirForm.className = "btn-gamer";
-                            btnAbrirForm.style.display = "inline-block";
-                        }
+                        document.getElementById('caixa-pix-generall-backup').style.display = "none";
+                        document.getElementById('texto-alerta-titulo').innerText = "⏳ Comprovante em Análise";
+                        document.getElementById('texto-alerta-desc').innerText = "Seu comprovante foi enviado com sucesso. Aguarde a validação do administrador.";
+                        document.getElementById('grid-vitrine-vendas').innerHTML = "";
+                    } else {
+                        // Oculta caixa de pix genérica caso tenha vitrine rodando
+                        document.getElementById('caixa-pix-geral-backup').style.display = "none";
+                        povoarVitrineDeVendasCliente(dados.jogos_liberados || {});
                     }
                     
                     irParaTela(viewCliente);
@@ -183,15 +169,44 @@ auth.onAuthStateChanged(user => {
     }
 });
 
-function verificarSeTemCardNaoAdquirido(jogosLiberadosUsuario) {
-    return new Promise((resolve) => {
-        database.ref('cards_disponiveis').once('value', snapshot => {
-            const cardsGlobais = snapshot.val();
-            if (!cardsGlobais) { resolve(false); return; }
-            const idsGlobais = Object.keys(cardsGlobais);
-            const temNovidade = idsGlobais.some(id => !jogosLiberadosUsuario[id]);
-            resolve(temNovidade);
+// MOTOR DA VITRINE DE PATCHES À VENDA
+function povoarVitrineDeVendasCliente(jogosLiberadosUsuario) {
+    const areaPendente = document.getElementById('area-compra-pendente');
+    const containerVitrine = document.getElementById('grid-vitrine-vendas');
+    
+    database.ref('cards_disponiveis').once('value', snapshot => {
+        const cardsGlobais = snapshot.val();
+        if (!cardsGlobais) { areaPendente.style.display = "none"; return; }
+        
+        containerVitrine.innerHTML = "";
+        let totalDisponiveisVenda = 0;
+
+        Object.keys(cardsGlobais).forEach(cardId => {
+            if (!jogosLiberadosUsuario[cardId]) {
+                totalDisponiveisVenda++;
+                const cardVitrine = document.createElement('div');
+                cardVitrine.className = 'game-card';
+                cardVitrine.style.border = "1px dashed #242f41";
+                
+                const precoExibicao = cardsGlobais[cardId].preco || "R$ 10,00";
+                
+                cardVitrine.innerHTML = `
+                    <img src="${cardsGlobais[cardId].capa_url}" style="opacity: 0.65;">
+                    <h4 style="color:#aaa;">[Disponível] ${cardsGlobais[cardId].titulo}</h4>
+                    <div style="position:absolute; top:10px; right:10px; background:#00ff66; color:#000; font-size:0.7rem; font-weight:bold; padding:3px 6px; border-radius:3px;">${precoExibicao}</div>
+                `;
+                cardVitrine.onclick = () => abrirModalJogo(cardsGlobais[cardId], true, cardId);
+                containerVitrine.appendChild(cardVitrine);
+            }
         });
+
+        if (totalDisponiveisVenda > 0) {
+            areaPendente.style.display = "block";
+            document.getElementById('texto-alerta-titulo').innerText = "🛒 Patches Disponíveis para Adquirir";
+            document.getElementById('texto-alerta-desc').innerText = "Selecione um patch acima para ver detalhes e enviar o comprovante.";
+        } else {
+            areaPendente.style.display = "none";
+        }
     });
 }
 
@@ -254,7 +269,7 @@ document.getElementById('form-editar-perfil-cliente').addEventListener('submit',
         await database.ref(`usuarios/${usuarioLogadoUid}/nome`).set(nome);
         await database.ref(`usuarios/${usuarioLogadoUid}/sobrenome`).set(sobrenome);
         await database.ref(`usuarios/${usuarioLogadoUid}/whatsapp`).set(whatsapp);
-        alert("🚀 Perfil atualizado com sucesso!");
+        alert("🚀 Perfil updated com sucesso!");
         modalEditarPerfil.classList.remove('active');
     } catch(err) { alert("Erro ao atualizar: " + err.message); }
 });
@@ -289,7 +304,7 @@ document.getElementById('form-cadastro-auth').addEventListener('submit', async (
         const credencial = await auth.createUserWithEmailAndPassword(email, senha);
         await database.ref('usuarios/' + credencial.user.uid).set({
             nome: nome, sobrenome: sobrenome, whatsapp: whatsapp, email: email,
-            status_cadastro: "pendente_pagamento", comprovante_base64: "", jogos_liberados: {}
+            status_cadastro: "pendente_pagamento", comprovante_base64: "", jogos_liberados: {}, id_card_comprado: ""
         });
     } catch (error) { alert("Erro ao cadastrar: " + error.message); }
 });
@@ -317,6 +332,49 @@ document.getElementById('btn-esqueci-senha').addEventListener('click', async () 
     } catch (error) { alert("Erro: " + error.message); }
 });
 
+// Envio de Comprovante
+document.getElementById('btn-fechar-form').addEventListener('click', () => modalFormEnvio.classList.remove('active'));
+
+const inputComprovante = document.getElementById('comprovante');
+const dropZone = document.getElementById('drop-zone');
+const fileInfo = document.getElementById('file-info');
+dropZone.addEventListener('click', () => inputComprovante.click());
+inputComprovante.addEventListener('change', (e) => verificarArquivo(e.target.files[0]));
+
+function verificarArquivo(file) {
+    if (!file) return;
+    if (file.size > 1048576) { alert("Arquivo maior que 1MB."); inputComprovante.value = ""; return; }
+    fileInfo.innerHTML = `✅ Selecionado: <strong>${file.name}</strong>`;
+}
+
+const converterBase64 = (file) => {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader(); reader.readAsDataURL(file);
+        reader.onload = () => resolve(reader.result); reader.onerror = (err) => reject(err);
+    });
+};
+
+document.getElementById('form-comprovante').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const arquivo = inputComprovante.files[0];
+    if (!arquivo) return alert("Anexe o arquivo!");
+    const cardEscolhidoId = document.getElementById('id-card-escolhido-compra').value;
+    const btn = document.getElementById('btn-enviar-tudo');
+    btn.innerText = "ENVIANDO..."; btn.disabled = true;
+    try {
+        const base64Str = await converterBase64(arquivo);
+        let base64Final = arquivo.type === "application/pdf" ? base64Str : base64Str.slice(0, 49000);
+        await database.ref(`usuarios/${usuarioLogadoUid}/comprovante_base64`).set(base64Final);
+        await database.ref(`usuarios/${usuarioLogadoUid}/status_cadastro`).set("comprovante_enviado");
+        if (cardEscolhidoId) {
+            await database.ref(`usuarios/${usuarioLogadoUid}/id_card_comprado`).set(cardEscolhidoId);
+        }
+        alert("🚀 Comprovante enviado com sucesso! Aguarde a liberação do administrador.");
+        modalFormEnvio.classList.remove('active');
+    } catch (error) { alert("Erro: " + error.message); }
+    finally { btn.innerText = "CONCLUIR INSCRIÇÃO"; btn.disabled = false; }
+});
+
 function ouvirCardsDoCliente(uid) {
     database.ref(`usuarios/${uid}`).on('value', snapshotUsuario => {
         gridCardsCliente.innerHTML = "";
@@ -335,7 +393,7 @@ function ouvirCardsDoCliente(uid) {
                 <h4>Analisando Comprovante...</h4>
             `;
             cardElement.addEventListener('click', () => {
-                alert("🎮 SEU ACESSO ESTÁ SENDO ANALISADO!\n\nRecebemos o seu comprovante PIX com sucesso. Nossa equipe está validando o pagamento para injetar o seu Card de jogo aqui no painel.");
+                alert("🎮 SEU ACESSO ESTÁ SE NDO ANALISADO!\n\nRecebemos o seu comprovante PIX com sucesso. Nossa equipe está validando o pagamento para injetar o seu Card de jogo aqui no painel.");
             });
             gridCardsCliente.appendChild(cardElement);
             return;
@@ -349,7 +407,7 @@ function ouvirCardsDoCliente(uid) {
                     cardElement.className = 'game-card';
                     cardElement.innerHTML = `<img src="${card.capa_url}"><h4>${card.titulo}</h4>`;
                     cardElement.addEventListener('contextmenu', (e) => { e.preventDefault(); return false; });
-                    cardElement.addEventListener('click', () => abrirModalJogo(card));
+                    cardElement.addEventListener('click', () => abrirModalJogo(card, false));
                     gridCardsCliente.appendChild(cardElement);
                 }
             });
@@ -357,7 +415,7 @@ function ouvirCardsDoCliente(uid) {
     });
 }
 
-function abrirModalJogo(card) {
+function abrirModalJogo(card, modoLojaVenda = false, cardId = "") {
     const imgCapa = document.getElementById('modal-jogo-capa');
     imgCapa.src = card.capa_url;
     document.getElementById('modal-jogo-titulo').innerText = card.titulo;
@@ -369,33 +427,70 @@ function abrirModalJogo(card) {
     const areaTextoSenha = document.getElementById('area-texto-senha-secreta');
     const textoSenhaReal = document.getElementById('texto-senha-secreta-real');
     const btnCopiarSenha = document.getElementById('btn-copiar-senha-modal');
+    const containerDownloads = document.getElementById('modal-jogo-botoes');
+    const btnAdquirirLoja = document.getElementById('btn-adquirir-patch-vitrine');
+    
+    // Elementos da Chave Pix do Bloco de Preview
+    const blocoPixPreview = document.getElementById('bloco-pix-dinamico-preview');
+    const txtPixPreviewReal = document.getElementById('texto-pix-dinamico-preview-real');
+    const btnCopiarPixPreview = document.getElementById('btn-copiar-pix-preview-dinamico');
 
     btnRevelarSenha.style.display = "block";
     areaTextoSenha.style.display = "none";
+    containerSenha.style.display = "none";
+    containerDownloads.style.display = "none";
+    btnAdquirirLoja.style.display = "none";
+    blocoPixPreview.style.display = "none";
 
-    if (card.senha_patch && card.senha_patch.trim() !== "") {
-        textoSenhaReal.innerText = card.senha_patch.trim();
-        containerSenha.style.display = "block";
-        btnRevelarSenha.onclick = () => { btnRevelarSenha.style.display = "none"; areaTextoSenha.style.display = "block"; };
-        // CONSERTO DE DIGITAÇÃO AQUI: Chamada correta da função executando perfeitamente
-        btnCopiarSenha.onclick = () => { executarCopiaGamerBlindada(textoSenhaReal.innerText, btnCopiarSenha); };
+    const precoFinalCard = card.preco || "R$ 10,00";
+    const pixFinalCard = card.pix || "88988470190";
+
+    if (modoLojaVenda) {
+        // Alimenta e exibe bloco de cópia rápida do PIX dinâmico do Card
+        txtPixPreviewReal.innerText = pixFinalCard;
+        blocoPixPreview.style.display = "block";
+        btnCopiarPixPreview.onclick = () => { executarCopiaGamerBlindada(pixFinalCard, btnCopiarPixPreview); };
+
+        document.getElementById('texto-preco-botao-dinamico').innerText = precoFinalCard;
+        btnAdquirirLoja.style.display = "block";
+        
+        btnAdquirirLoja.onclick = () => {
+            fecharModalJogo();
+            document.getElementById('id-card-escolhido-compra').value = cardId;
+            document.getElementById('titulo-envio-comprovante-dinamico').innerText = `Adquirir: ${card.titulo}`;
+            
+            // Injeta dados dinâmicos do Card no formulário de checkout final
+            document.getElementById('texto-preco-modal-checkout').innerText = precoFinalCard;
+            document.getElementById('texto-chave-pix-checkout').innerText = pixFinalCard;
+            
+            document.getElementById('btn-copiar-pix-checkout').onclick = () => {
+                executarCopiaGamerBlindada(pixFinalCard, document.getElementById('btn-copiar-pix-checkout'));
+            };
+            
+            modalFormEnvio.classList.add('active');
+        };
     } else {
-        containerSenha.style.display = "none";
-    }
-
-    const container = document.getElementById('modal-jogo-botoes');
-    container.innerHTML = "";
-    if (card.botoes) {
-        card.botoes.forEach(btn => {
-            const buttonElement = document.createElement('button');
-            buttonElement.className = 'btn-download-dinamico';
-            buttonElement.innerText = btn.texto;
-            buttonElement.style.width = "100%";
-            buttonElement.style.cursor = "pointer";
-            buttonElement.addEventListener('dragstart', (e) => e.preventDefault());
-            buttonElement.addEventListener('click', () => { window.open(btn.url, '_blank'); });
-            container.appendChild(buttonElement);
-        });
+        containerDownloads.style.display = "flex";
+        if (card.senha_patch && card.senha_patch.trim() !== "") {
+            textoSenhaReal.innerText = card.senha_patch.trim();
+            containerSenha.style.display = "block";
+            btnRevelarSenha.onclick = () => { btnRevelarSenha.style.display = "none"; areaTextoSenha.style.display = "block"; };
+            btnCopiarSenha.onclick = () => { executarCopiaGamerBlindada(textoSenhaReal.innerText, btnCopiarSenha); };
+        }
+        
+        containerDownloads.innerHTML = "";
+        if (card.botoes) {
+            card.botoes.forEach(btn => {
+                const buttonElement = document.createElement('button');
+                buttonElement.className = 'btn-download-dinamico';
+                buttonElement.innerText = btn.texto;
+                buttonElement.style.width = "100%";
+                buttonElement.style.cursor = "pointer";
+                buttonElement.addEventListener('dragstart', (e) => e.preventDefault());
+                buttonElement.addEventListener('click', () => { window.open(btn.url, '_blank'); });
+                containerDownloads.appendChild(buttonElement);
+            });
+        }
     }
     modalDetalhesJogo.classList.add('active');
 }
@@ -517,10 +612,7 @@ function adicionarLinhaSubcategoriaVisual(blocoId, txtLink = "", urlLink = "") {
     containerRows.appendChild(divRow);
 }
 
-function removerBlocoCategoriaVisual(blocoId) {
-    if (confirm("⚠️ Deseja deletar toda essa categoria?")) { document.getElementById(blocoId).remove(); }
-}
-
+// SALVAR VISUAL DO MENU
 document.getElementById('btn-salvar-visual-menu').addEventListener('click', async () => {
     const blocos = document.querySelectorAll('.bloco-categoria-visual');
     const estruturaMenuFinal = []; let dadosValidos = true;
@@ -544,12 +636,16 @@ document.getElementById('btn-salvar-visual-menu').addEventListener('click', asyn
     if (!dadosValidos) { alert("⚠️ Existem campos incompletos no construtor."); return; }
     try {
         await database.ref('configuracao_menu_json').set(estruturaMenuFinal.length > 0 ? JSON.stringify(estruturaMenuFinal, null, 2) : "");
-        alert("🚀 Menu Horizontal updated com sucesso!");
+        alert("🚀 Menu Horizontal atualizado com sucesso!");
     } catch (e) { alert("Erro: " + e.message); }
 });
 
+function removerBlocoCategoriaVisual(blocoId) {
+    if (confirm("⚠️ Deseja deletar toda essa categoria?")) { document.getElementById(blocoId).remove(); }
+}
+
 // ==========================================================================
-// CONTROLE DE CARDS DE JOGOS (ADMIN)
+// CONTROLE DE CARDS DE JOGOS (ADMIN) - MODIFICADO COM PREÇO E PIX
 // ==========================================================================
 document.getElementById('form-criar-card').addEventListener('submit', async (e) => {
     e.preventDefault(); const idEdicao = document.getElementById('card-id-edicao').value;
@@ -559,7 +655,17 @@ document.getElementById('form-criar-card').addEventListener('submit', async (e) 
         const url = document.getElementById(`btn-url-${i}`).value.trim();
         if (txt && url) botoes.push({ texto: txt, url: url });
     }
-    const dadosCard = { titulo: document.getElementById('card-titulo').value.trim(), capa_url: document.getElementById('card-capa').value.trim(), descricao: document.getElementById('card-descricao').value.trim(), senha_patch: document.getElementById('card-senha-patch').value.trim(), botoes: botoes };
+    
+    const dadosCard = { 
+        titulo: document.getElementById('card-titulo').value.trim(), 
+        capa_url: document.getElementById('card-capa').value.trim(), 
+        descricao: document.getElementById('card-descricao').value.trim(), 
+        preco: document.getElementById('card-preco').value.trim(), 
+        pix: document.getElementById('card-pix').value.trim(), 
+        senha_patch: document.getElementById('card-senha-patch').value.trim(), 
+        botoes: botoes 
+    };
+
     try {
         if (idEdicao) { await database.ref(`cards_disponiveis/${idEdicao}`).set(dadosCard); alert("🔄 Card atualizado!"); cancelarEdicaoCard(); }
         else { await database.ref('cards_disponiveis').push(dadosCard); alert("🎯 Novo Card criado!"); document.getElementById('form-criar-card').reset(); }
@@ -575,7 +681,10 @@ function ouvirCardsGlobaisAdmin() {
             div.innerHTML = `
                 <div style="display:flex; gap:10px; align-items:center;">
                     <img src="${cards[id].capa_url}" style="width:40px; height:50px; object-fit:cover; border-radius:4px;">
-                    <div><p style="margin:0; font-weight:bold; color:#fff;">${cards[id].titulo}</p></div>
+                    <div>
+                        <p style="margin:0; font-weight:bold; color:#fff;">${cards[id].titulo}</p>
+                        <p style="margin:2px 0 0 0; font-size:0.75rem; color:#00ff66;">${cards[id].preco || 'R$ 10,00'}</p>
+                    </div>
                 </div>
                 <div style="display:flex; gap:5px; margin-top:10px;">
                     <button class="btn-visualizar-comprovante" style="margin:0; background:#24334c; border-color:#00ff66; color:#00ff66;" onclick="carregarCardParaEdicao('${id}')">✏️ Editar</button>
@@ -594,6 +703,8 @@ function carregarCardParaEdicao(id) {
         document.getElementById('card-titulo').value = card.titulo;
         document.getElementById('card-capa').value = card.capa_url;
         document.getElementById('card-descricao').value = card.descricao;
+        document.getElementById('card-preco').value = card.preco || "";
+        document.getElementById('card-pix').value = card.pix || "";
         document.getElementById('card-senha-patch').value = card.senha_patch || "";
         for(let i=1; i<=4; i++) { document.getElementById(`btn-txt-${i}`).value = ""; document.getElementById(`btn-url-${i}`).value = ""; }
         if (card.botoes) { card.botoes.forEach((btn, index) => { document.getElementById(`btn-txt-${index+1}`).value = btn.texto; document.getElementById(`btn-url-${index+1}`).value = btn.url; }); }
@@ -622,120 +733,135 @@ document.getElementById('btn-exportar-cards').addEventListener('click', () => {
     });
 });
 
+// ==========================================================================
+// PAINEL ADMINISTRATIVO: MOTOR DO SISTEMA QUALIFICADO DE 3 ABAS HISTÓRICAS
+// ==========================================================================
 function inicializarPainelAdmin() {
-    database.ref('usuarios').on('value', snapshot => {
-        listaUsuariosAdmin.innerHTML = ""; const users = snapshot.val();
-        if (!users) { listaUsuariosAdmin.innerHTML = `<p style="color:#aaa; padding:15px;">Nenhum usuário.</p>`; return; }
+    database.ref('cards_disponiveis').once('value', snapshotCards => {
+        const cacheCardsGlobais = snapshotCards.val() || {};
 
-        let contagemFiltrados = 0;
+        database.ref('usuarios').on('value', snapshot => {
+            listaUsuariosAdmin.innerHTML = ""; const users = snapshot.val();
+            if (!users) { listaUsuariosAdmin.innerHTML = `<p style="color:#aaa; padding:15px;">Nenhum usuário.</p>`; return; }
 
-        Object.keys(users).forEach(uid => {
-            if (users[uid].email === "admin@admin.com") return;
+            let contagemFiltrados = 0;
 
-            const status = users[uid].status_cadastro || 'pendente_pagamento';
+            Object.keys(users).forEach(uid => {
+                if (users[uid].email === "admin@admin.com") return;
 
-            if (filtroAdminAtual === "pendentes" && status === "pago") return;
-            if (filtroAdminAtual === "pendentes" && status === "cliente_cadastrado") return;
-            if (filtroAdminAtual === "pendentes" && status === "solicitou_exclusao") return; 
-            
-            if (filtroAdminAtual === "concluidos" && status !== "pago") return;
-            
-            if (filtroAdminAtual === "cadastrados" && status !== "cliente_cadastrado" && status !== "solicitou_exclusao") return;
+                const status = users[uid].status_cadastro || 'pendente_pagamento';
 
-            contagemFiltrados++;
-            const userBox = document.createElement('div'); 
-            userBox.className = 'user-item';
+                if (filtroAdminAtual === "pendentes" && status === "pago") return;
+                if (filtroAdminAtual === "pendentes" && status === "cliente_cadastrado") return;
+                if (filtroAdminAtual === "pendentes" && status === "solicitou_exclusao") return; 
+                
+                if (filtroAdminAtual === "concluidos" && status !== "pago") return;
+                
+                if (filtroAdminAtual === "cadastrados" && status !== "cliente_cadastrado" && status !== "solicitou_exclusao") return;
 
-            if (status === "solicitou_exclusao") {
-                userBox.style.border = "2px solid #ff3333";
-            }
-
-            let listaJogosAtivosHtml = "";
-            const jogos = users[uid].jogos_liberados || {};
-            const keysJogos = Object.keys(jogos);
-            if (keysJogos.length === 0) { listaJogosAtivosHtml = "<li style='color:#ff3333;'>Nenhum card ativo</li>"; }
-            else {
-                keysJogos.forEach(gameId => {
-                    listaJogosAtivosHtml += `<li style="display:flex; justify-content:space-between; align-items:center; background:#141d26; padding:5px; margin:3px 0; border-radius:4px; font-size:0.8rem;"><span>🎮 ID: ${gameId.slice(-6)}...</span><button onclick="removerAcessoJogo('${uid}', '${gameId}')" style="background:none; border:none; color:#ff3333; cursor:pointer;">[Remover]</button></li>`;
-                });
-            }
-
-            const estiloGamerSelectCorrigido = `style="width:100%; height:40px; background:#1c2434; border:1px solid #242f41; border-radius:4px; color:#fff; padding:0 10px; margin-bottom:10px; font-size:0.85rem;"`;
-
-            if (filtroAdminAtual === "pendentes") {
-                const temComp = users[uid].comprovante_base64 && users[uid].comprovante_base64.length > 10;
-                const btnComp = temComp 
-                    ? `<button class="btn-visualizar-comprovante" onclick="abrirComprovanteNovaAba('${uid}')">👁️ Ver Comprovante Enviado</button>`
-                    : `<p style="color:#00ff66; font-size:0.8rem; margin:5px 0;">⏳ Aguardando comprovante PIX...</p>`;
-
-                userBox.innerHTML = `
-                    <div class="user-info">
-                        <p><strong>Jogador:</strong> ${users[uid].nome} ${users[uid].sobrenome}</p>
-                        <p><strong>E-mail:</strong> ${users[uid].email}</p>
-                        <p><strong>WhatsApp:</strong> ${users[uid].whatsapp || 'Não cadastrado'}</p>
-                        <p><strong>Status Antigo:</strong> <span style="color:#00ff66">${status.toUpperCase()}</span></p>
-                        ${btnComp}
-                    </div>
-                    <select id="select-game-${uid}" ${estiloGamerSelectCorrigido}><option value="">-- Selecione o Novo Card para Injetar --</option></select>
-                    <button class="btn-inject" onclick="injetarCardParaUsuario('${uid}')">Confirmar Pagamento & Mover para Aprovados</button>
-                    <button class="btn-sair" onclick="deletarUsuarioDoBancoTotal('${uid}', '${users[uid].email}')" style="width:100%; font-size:0.8rem; padding:6px; margin-top:5px; background:#211212; border:1px dashed #ff3333; color:#ff5555;">🗑️ Excluir Conta permanentemente</button>
-                `;
-            } else if (filtroAdminAtual === "concluidos") {
-                userBox.innerHTML = `
-                    <div class="user-info">
-                        <p><strong>🏆 Jogador Ativo (Temporada):</strong> ${users[uid].nome} ${users[uid].sobrenome}</p>
-                        <p><strong>WhatsApp:</strong> ${users[uid].whatsapp || 'Não cadastrado'}</p>
-                        <p><strong>E-mail:</strong> ${users[uid].email}</p>
-                        <div style="margin: 10px 0; background:#1b2430; padding:8px; border-radius:4px;">
-                            <p style="margin:0 0 5px 0; font-size:0.8rem; color:#00ff66;">Cards Ativos na Conta:</p>
-                            <ul style="margin:0; padding:0; list-style:none;">${listaJogosAtivosHtml}</ul>
-                        </div>
-                    </div>
-                    <div style="display:flex; gap:5px; align-items:center; margin-bottom:10px;">
-                        <select id="select-game-${uid}" ${estiloGamerSelectCorrigido} style="margin:0; flex:1; height:40px;"><option value="">+ Injetar Card Extra</option></select>
-                        <button class="btn-gamer" onclick="injetarCardParaUsuario('${uid}')" style="margin:0; height:40px; width:45px; padding:0;">+</button>
-                    </div>
-                    <button class="btn-sair" onclick="excluirSolicitacaoEComprovante('${uid}')" style="width:100%; font-size:0.8rem; padding:6px; background:#2d1313; border:1px solid #ff3333; color:#ff3333;">📦 Mover Manualmente para Cadastrados (Recuar)</button>
-                `;
-            } else {
-                let botoesAbaCadastrados = `
-                    <div style="display:flex; gap:5px; align-items:center;">
-                        <select id="select-game-${uid}" ${estiloGamerSelectCorrigido} style="margin:0; flex:1; height:40px;"><option value="">Injetar Novo Patch Direto</option></select>
-                        <button class="btn-gamer" onclick="injetarCardParaUsuario('${uid}')" style="margin:0; height:40px; width:45px; padding:0;">+</button>
-                    </div>
-                `;
+                contagemFiltrados++;
+                const userBox = document.createElement('div'); 
+                userBox.className = 'user-item';
 
                 if (status === "solicitou_exclusao") {
-                    botoesAbaCadastrados = `
-                        <div style="background:#281216; border:1px solid #ff3333; padding:10px; border-radius:4px; text-align:center;">
-                            <p style="color:#ff3333; font-weight:bold; font-size:0.85rem; margin-bottom:8px;">⚠️ O USUÁRIO SOLICITOU A EXCLUSÃO DA CONTA</p>
-                            <button class="btn-gamer" style="background:#ff3333; color:#fff; font-size:0.8rem; padding:8px;" onclick="deletarUsuarioDoBancoTotal('${uid}', '${users[uid].email}')">🚨 APAGAR DADOS DO BANCO TOTAL</button>
+                    userBox.style.border = "2px solid #ff3333";
+                }
+
+                let listaJogosAtivosHtml = "";
+                const jogos = users[uid].jogos_liberados || {};
+                const keysJogos = Object.keys(jogos);
+                if (keysJogos.length === 0) { listaJogosAtivosHtml = "<li style='color:#ff3333;'>Nenhum card ativo</li>"; }
+                else {
+                    keysJogos.forEach(gameId => {
+                        listaJogosAtivosHtml += `<li style="display:flex; justify-content:space-between; align-items:center; background:#141d26; padding:5px; margin:3px 0; border-radius:4px; font-size:0.8rem;"><span>🎮 ID: ${gameId.slice(-6)}...</span><button onclick="removerAcessoJogo('${uid}', '${gameId}')" style="background:none; border:none; color:#ff3333; cursor:pointer;">[Remover]</button></li>`;
+                    });
+                }
+
+                const estiloGamerSelectCorrigido = `style="width:100%; height:40px; background:#1c2434; border:1px solid #242f41; border-radius:4px; color:#fff; padding:0 10px; margin-bottom:10px; font-size:0.85rem;"`;
+
+                if (filtroAdminAtual === "pendentes") {
+                    const temComp = users[uid].comprovante_base64 && users[uid].comprovante_base64.length > 10;
+                    const btnComp = temComp 
+                        ? `<button class="btn-visualizar-comprovante" onclick="abrirComprovanteNovaAba('${uid}')">👁️ Ver Comprovante Enviado</button>`
+                        : `<p style="color:#00ff66; font-size:0.8rem; margin:5px 0;">⏳ Aguardando comprovante PIX...</p>`;
+
+                    let tagJogoEscolhidoLoja = "";
+                    const idComprado = users[uid].id_card_comprado;
+                    if (idComprado && cacheCardsGlobais[idComprado]) {
+                        const vlr = cacheCardsGlobais[idComprado].preco || "R$ 10,00";
+                        tagJogoEscolhidoLoja = `<p style="background:#132219; border:1px solid #00ff66; color:#00ff66; padding:6px; border-radius:4px; font-size:0.85rem; margin-bottom:10px;">🎯 <strong>Patch Escolhido:</strong> ${cacheCardsGlobais[idComprado].titulo} (${vlr})</p>`;
+                    }
+
+                    userBox.innerHTML = `
+                        <div class="user-info">
+                            <p><strong>Jogador:</strong> ${users[uid].nome} ${users[uid].sobrenome}</p>
+                            <p><strong>E-mail:</strong> ${users[uid].email}</p>
+                            <p><strong>WhatsApp:</strong> ${users[uid].whatsapp || 'Não cadastrado'}</p>
+                            <p><strong>Status Antigo:</strong> <span style="color:#00ff66">${status.toUpperCase()}</span></p>
+                            ${tagJogoEscolhidoLoja}
+                            ${btnComp}
                         </div>
+                        <select id="select-game-${uid}" ${estiloGamerSelectCorrigido}><option value="${idComprado || ''}">${idComprado && cacheCardsGlobais[idComprado] ? 'Injetar: ' + cacheCardsGlobais[idComprado].titulo : '-- Selecione o Card para Injetar --'}</option></select>
+                        <button class="btn-inject" onclick="injetarCardParaUsuario('${uid}')">Confirmar Pagamento & Mover para Aprovados</button>
+                        <button class="btn-sair" onclick="deletarUsuarioDoBancoTotal('${uid}', '${users[uid].email}')" style="width:100%; font-size:0.8rem; padding:6px; margin-top:5px; background:#211212; border:1px dashed #ff3333; color:#ff5555;">🗑️ Excluir Conta permanentemente</button>
+                    `;
+                } else if (filtroAdminAtual === "concluidos") {
+                    userBox.innerHTML = `
+                        <div class="user-info">
+                            <p><strong>🏆 Jogador Ativo (Temporada):</strong> ${users[uid].nome} ${users[uid].sobrenome}</p>
+                            <p><strong>WhatsApp:</strong> ${users[uid].whatsapp || 'Não cadastrado'}</p>
+                            <p><strong>E-mail:</strong> ${users[uid].email}</p>
+                            <div style="margin: 10px 0; background:#1b2430; padding:8px; border-radius:4px;">
+                                <p style="margin:0 0 5px 0; font-size:0.8rem; color:#00ff66;">Cards Ativos na Conta:</p>
+                                <ul style="margin:0; padding:0; list-style:none;">${listaJogosAtivosHtml}</ul>
+                            </div>
+                        </div>
+                        <div style="display:flex; gap:5px; align-items:center; margin-bottom:10px;">
+                            <select id="select-game-${uid}" ${estiloGamerSelectCorrigido} style="margin:0; flex:1; height:40px;"><option value="">+ Injetar Card Extra</option></select>
+                            <button class="btn-gamer" onclick="injetarCardParaUsuario('${uid}')" style="margin:0; height:40px; width:45px; padding:0;">+</button>
+                        </div>
+                        <button class="btn-sair" onclick="excluirSolicitacaoEComprovante('${uid}')" style="width:100%; font-size:0.8rem; padding:6px; background:#2d1313; border:1px solid #ff3333; color:#ff3333;">📦 Mover Manualmente para Cadastrados (Recuar)</button>
+                    `;
+                } else {
+                    let botoesAbaCadastrados = `
+                        <div style="display:flex; gap:5px; align-items:center;">
+                            <select id="select-game-${uid}" ${estiloGamerSelectCorrigido} style="margin:0; flex:1; height:40px;"><option value="">Injetar Novo Patch Direto</option></select>
+                            <button class="btn-gamer" onclick="injetarCardParaUsuario('${uid}')" style="margin:0; height:40px; width:45px; padding:0;">+</button>
+                        </div>
+                    `;
+
+                    if (status === "solicitou_exclusao") {
+                        botoesAbaCadastrados = `
+                            <div style="background:#281216; border:1px solid #ff3333; padding:10px; border-radius:4px; text-align:center;">
+                                <p style="color:#ff3333; font-weight:bold; font-size:0.85rem; margin-bottom:8px;">⚠️ O USUÁRIO SOLICITOU A EXCLUSÃO DA CONTA</p>
+                                <button class="btn-gamer" style="background:#ff3333; color:#fff; font-size:0.8rem; padding:8px;" onclick="deletarUsuarioDoBancoTotal('${uid}', '${users[uid].email}')">🚨 APAGAR DADOS DO BANCO TOTAL</button>
+                            </div>
+                        `;
+                    }
+
+                    userBox.innerHTML = `
+                        <div class="user-info">
+                            <p><strong>👥 Cliente da Base Comercial:</strong> ${users[uid].nome} ${users[uid].sobrenome}</p>
+                            <p><strong>WhatsApp:</strong> ${users[uid].whatsapp || 'Não cadastrado'}</p>
+                            <p><strong>E-mail:</strong> ${users[uid].email}</p>
+                            <div style="margin: 10px 0; background:#161c26; border:1px solid #242f41; padding:8px; border-radius:4px;">
+                                <p style="margin:0 0 5px 0; font-size:0.8rem; color:#8899a6;">Patrimônio de Jogos do Cliente:</p>
+                                <ul style="margin:0; padding:0; list-style:none;">${listaJogosAtivosHtml}</ul>
+                            </div>
+                        </div>
+                        ${botoesAbaCadastrados}
                     `;
                 }
 
-                userBox.innerHTML = `
-                    <div class="user-info">
-                        <p><strong>👥 Cliente da Base Comercial:</strong> ${users[uid].nome} ${users[uid].sobrenome}</p>
-                        <p><strong>WhatsApp:</strong> ${users[uid].whatsapp || 'Não cadastrado'}</p>
-                        <p><strong>E-mail:</strong> ${users[uid].email}</p>
-                        <div style="margin: 10px 0; background:#161c26; border:1px solid #242f41; padding:8px; border-radius:4px;">
-                            <p style="margin:0 0 5px 0; font-size:0.8rem; color:#8899a6;">Patrimônio de Jogos do Cliente:</p>
-                            <ul style="margin:0; padding:0; list-style:none;">${listaJogosAtivosHtml}</ul>
-                        </div>
-                    </div>
-                    ${botoesAbaCadastrados}
-                `;
+                listaUsuariosAdmin.appendChild(userBox);
+                const selectElement = document.getElementById(`select-game-${uid}`);
+                if (selectElement) alimentarSelectComCards(selectElement, users[uid].jogos_liberados);
+            });
+
+            if (contagemFiltrados === 0) {
+                listaUsuariosAdmin.innerHTML = `<p style="color:#aaa; padding:15px; text-align:center;">Nenhum jogador nesta aba.</p>`;
             }
-
-            listaUsuariosAdmin.appendChild(userBox);
-            const selectElement = document.getElementById(`select-game-${uid}`);
-            if (selectElement) alimentarSelectComCards(selectElement, users[uid].jogos_liberados);
         });
-
-        if (contagemFiltrados === 0) {
-            listaUsuariosAdmin.innerHTML = `<p style="color:#aaa; padding:15px; text-align:center;">Nenhum jogador nesta aba.</p>`;
-        }
     });
 }
 
@@ -772,7 +898,7 @@ async function injetarCardParaUsuario(uid) {
             await database.ref(`usuarios/${uid}/jogos_liberados/${selectedCardId}`).set(true);
             alert("🔥 Sucesso! Jogador movido para Aprovados!");
         } else {
-            alert("Status updated para PAGO!");
+            alert("Status atualizado para PAGO!");
         }
     } catch (error) { alert("Erro: " + error.message); }
 }
@@ -788,6 +914,7 @@ async function excluirSolicitacaoEComprovante(uid) {
     if (confirm("Deseja arquivar e mover este cliente para a aba de 'Clientes Cadastrados'?")) {
         try {
             await database.ref(`usuarios/${uid}/comprovante_base64`).set("");
+            await database.ref(`usuarios/${uid}/id_card_comprado`).set("");
             await database.ref(`usuarios/${uid}/status_cadastro`).set("cliente_cadastrado");
             alert("Mergulhado com sucesso na lista de cadastrados!");
         } catch (error) { alert("Erro: " + error.message); }
@@ -817,6 +944,7 @@ document.getElementById('btn-reset-geral-temporada').addEventListener('click', a
                     if (usuarios[uid].email !== "admin@admin.com" && usuarios[uid].status_cadastro === "pago") {
                         loteMudancas[`usuarios/${uid}/status_cadastro`] = "cliente_cadastrado";
                         loteMudancas[`usuarios/${uid}/comprovante_base64`] = ""; 
+                        loteMudancas[`usuarios/${uid}/id_card_comprado`] = ""; 
                     }
                 });
                 await database.ref().update(loteMudancas);
