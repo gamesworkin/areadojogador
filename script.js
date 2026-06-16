@@ -195,7 +195,7 @@ auth.onAuthStateChanged(user => {
                     
                     irParaTela(viewCliente);
                     ouvirCardsDoCliente(user.uid);
-                    ouvirEConstruirMenuCliente(); 
+                    ouvirEConstruunMenuCliente(); 
                     inicializarBotaoWhatsApp();
                     configurarCopiaPixPainel(); 
                 }
@@ -412,7 +412,7 @@ function ouvirCardsDoCliente(uid) {
     });
 }
 
-function ouvirEConstruirMenuCliente() {
+function ouvirEConstruunMenuCliente() {
     const menuContainer = document.getElementById('area-menu-dinamico');
     const linksList = document.getElementById('container-links-menu');
     if (!linksList || !menuContainer) return;
@@ -574,7 +574,7 @@ if (btnSalvarVisualMenu) {
             else {
                 const linesSub = bloco.querySelectorAll('.linha-subcategoria-visual');
                 linesSub.forEach(linha => {
-                    const txt = linha.querySelector('.sub-txt').value.trim();
+                    const txt = inlineTxt = linha.querySelector('.sub-txt').value.trim();
                     const url = linha.querySelector('.sub-url').value.trim();
                     if (txt && url) subcategorias.push({ texto: txt, url: url });
                     else if (txt || url) dadosValidos = false;
@@ -585,7 +585,7 @@ if (btnSalvarVisualMenu) {
         if (!dadosValidos) { alert("⚠️ Existem campos incompletos no construtor."); return; }
         try {
             await database.ref('configuracao_menu_json').set(estruturaMenuFinal.length > 0 ? JSON.stringify(estruturaMenuFinal, null, 2) : "");
-            alert("🚀 Menu Horizontal updated successfully!");
+            alert("🚀 Menu Horizontal atualizado com sucesso!");
         } catch (e) { alert("Erro: " + e.message); }
     });
 }
@@ -838,12 +838,36 @@ function abrirComprovanteNovaAba(uid) {
     });
 }
 
-async function deletarUsuarioDoBancoTotal(uid, email) {
-    if (confirm(`🚨 REMOÇÃO PERMANENTE DO BANCO:\n\nIsso vai apagar os registros do e-mail: ${email}.\n\nClique em OK para prosseguir.`)) {
+async function injetarCardParaUsuario(uid) {
+    const selectElement = document.getElementById(`select-game-${uid}`);
+    if (!selectElement) return;
+    const selectedCardId = selectElement.value;
+    try {
+        await database.ref(`usuarios/${uid}/status_cadastro`).set("pago");
+        if (selectedCardId) {
+            await database.ref(`usuarios/${uid}/jogos_liberados/${selectedCardId}`).set(true);
+            alert("🔥 Sucesso! Jogador movido para Aprovados!");
+        } else {
+            alert("Status atualizado para PAGO!");
+        }
+    } catch (error) { alert("Erro: " + error.message); }
+}
+
+async function removerAcessoJogo(uid, gameId) {
+    if (confirm("Deseja remover o acesso deste card da conta do jogador?")) {
+        await database.ref(`usuarios/${uid}/jogos_liberados/${gameId}`).remove();
+        alert("Acesso removido!");
+    }
+}
+
+async function excluirSolicitacaoEComprovante(uid) {
+    if (confirm("Deseja arquivar e mover este cliente para a aba de 'Clientes Cadastrados'?")) {
         try {
-            await database.ref(`usuarios/${uid}`).remove();
-            alert(`🔥 Dados deletados com sucesso no banco!\n\nPASSO FINAL OBRIGATÓRIO:\nRemova manualmente o usuário no Auth usando o e-mail:\n 👉 ${email}`);
-        } catch(err) { alert("Erro ao limpar dados do banco: " + err.message); }
+            await database.ref(`usuarios/${uid}/comprovante_base64`).set("");
+            await database.ref(`usuarios/${uid}/id_card_comprado`).set("");
+            await database.ref(`usuarios/${uid}/status_cadastro`).set("cliente_cadastrado");
+            alert("Mergulhado com sucesso na lista de cadastrados!");
+        } catch (error) { alert("Erro: " + error.message); }
     }
 }
 
@@ -874,6 +898,29 @@ if (btnResetGeral) {
             }
         }
     });
+}
+
+// Amarrações de escuta contra cliques de segurança visual e proteção contra botões fantasmas
+const btnFecharFormElement = document.getElementById('btn-fechar-form');
+if (btnFecharFormElement) {
+    btnFecharFormElement.addEventListener('click', () => {
+        if (modalFormEnvio) modalFormEnvio.classList.remove('active');
+    });
+}
+
+const inputComprovanteElement = document.getElementById('comprovante');
+const dropZoneElement = document.getElementById('drop-zone');
+const fileInfoElement = document.getElementById('file-info');
+
+if (dropZoneElement && inputComprovanteElement) {
+    dropZoneElement.onclick = function() {
+        inputComprovanteElement.click();
+    };
+    inputComprovanteElement.onchange = function(e) {
+        if (e.target.files && e.target.files[0]) {
+            verificarArquivo(e.target.files[0]);
+        }
+    };
 }
 
 document.addEventListener('contextmenu', (e) => {
