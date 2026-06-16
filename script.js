@@ -31,10 +31,24 @@ const listaUsuariosAdmin = document.getElementById('lista-usuarios-admin');
 const listaCardsCriados = document.getElementById('lista-cards-criados');
 const inputWhatsApp = document.getElementById('cad-whatsapp');
 const perfWhatsApp = document.getElementById('perf-whatsapp');
+const btnRetrairVitrine = document.getElementById('btn-retrair-vitrine');
+const wrapperRetratilVitrine = document.getElementById('wrapper-retratil-vitrine');
 
 let usuarioLogadoUid = null;
 let dadosClienteAtual = {};
 let filtroAdminAtual = "pendentes";
+
+// Sistema de Sanfona para recolher a vitrine de compras da Dashboard
+if (btnRetrairVitrine && wrapperRetratilVitrine) {
+    btnRetrairVitrine.addEventListener('click', () => {
+        wrapperRetratilVitrine.classList.toggle('escondido');
+        if (wrapperRetratilVitrine.classList.contains('escondido')) {
+            btnRetrairVitrine.innerText = "Exibir Vitrine";
+        } else {
+            btnRetrairVitrine.innerText = "Ocultar Vitrine";
+        }
+    });
+}
 
 // Máscaras Dinâmicas para WhatsApp (Cadastro e Perfil)
 function aplicarMascaraWhats(elemento) {
@@ -226,8 +240,7 @@ function povoarVitrineDeVendasCliente(jogosLiberadosUsuario) {
 
         if (totalDisponiveisVenda > 0) {
             areaPendente.style.display = "block";
-            document.getElementById('texto-alerta-titulo').innerText = "🛒 Patches Disponíveis para Adquirir";
-            document.getElementById('texto-alerta-desc').innerText = "Selecione um patch acima para ver detalhes e enviar o comprovante.";
+            // Mantém os textos originais e integridade intocados
         } else {
             areaPendente.style.display = "none";
         }
@@ -507,7 +520,10 @@ function abrirModalJogo(card, modoLojaVenda = false, cardId = "") {
         if (txtPixPreviewReal) txtPixPreviewReal.innerText = pixFinalCard;
         if (blocoPixPreview) blocoPixPreview.style.display = "block";
         if (btnCopiarPixPreview) {
-            btnCopiarPixPreview.onclick = () => { executarCopiaGamerBlindada(pixFinalCard, btnCopiarPixPreview); };
+            btnCopiarPixPreview.onclick = (e) => { 
+                e.stopPropagation();
+                executarCopiaGamerBlindada(pixFinalCard, btnCopiarPixPreview); 
+            };
         }
 
         document.getElementById('texto-preco-botao-dinamico').innerText = precoFinalCard;
@@ -601,15 +617,21 @@ function ouvirEConstruirMenuCliente() {
                     aCat.className = 'nav-link-item'; 
                     aCat.innerText = item.categoria;
                     
-                    // Tratamento adaptado para menus retráteis ou links diretos
                     if (item.tipo === "link" && item.url_categoria) { 
                         aCat.href = item.url_categoria; 
                         aCat.target = "_blank"; 
                     } else if (item.tipo === "menu") {
-                        // Evita o redirecionamento se houver links órfãos e adiciona o controle de clique mobile
                         aCat.href = "javascript:void(0);";
+                        
+                        // Evento de clique unificado para mobile e desktop que impede bolha de quebra
                         liCat.addEventListener('click', (e) => {
                             e.stopPropagation();
+                            
+                            // Remove a visibilidade de outros submenus abertos antes de alternar o atual
+                            document.querySelectorAll('.nav-dinamica-item').forEach(el => {
+                                if (el !== liCat) el.classList.remove('submenu-visivel');
+                            });
+                            
                             liCat.classList.toggle('submenu-visivel');
                         });
                     }
@@ -625,7 +647,6 @@ function ouvirEConstruirMenuCliente() {
                             aSub.href = sub.url; 
                             aSub.target = "_blank";
                             
-                            // Garante que o clique no sublink não feche o menu pai precocemente no mobile
                             aSub.addEventListener('click', (e) => { e.stopPropagation(); });
                             
                             liSub.appendChild(aSub); 
@@ -640,6 +661,11 @@ function ouvirEConstruirMenuCliente() {
         } catch (e) { menuContainer.style.display = "none"; }
     });
 }
+
+// Fecha submenus ativos se clicar em qualquer lugar vazio da tela
+document.addEventListener('click', () => {
+    document.querySelectorAll('.nav-dinamica-item').forEach(el => el.classList.remove('submenu-visivel'));
+});
 
 function inicializarBotaoWhatsApp() {
     const whatsappNumero = "5588988470190"; 
@@ -742,7 +768,7 @@ if (btnSalvarVisualMenu) {
                 const linesSub = bloco.querySelectorAll('.linha-subcategoria-visual');
                 linesSub.forEach(linha => {
                     const txt = linha.querySelector('.sub-txt').value.trim();
-                    const url = inlineUrl = linha.querySelector('.sub-url').value.trim();
+                    const url = linha.querySelector('.sub-url').value.trim();
                     if (txt && url) subcategorias.push({ texto: txt, url: url });
                     else if (txt || url) dadosValidos = false;
                 });
@@ -1030,7 +1056,7 @@ async function injetarCardParaUsuario(uid) {
             await database.ref(`usuarios/${uid}/jogos_liberados/${selectedCardId}`).set(true);
             alert("🔥 Sucesso! Jogador movido para Aprovados!");
         } else {
-            alert("Status updated to PAGO!");
+            alert("Status atualizado para PAGO!");
         }
     } catch (error) { alert("Erro: " + error.message); }
 }
