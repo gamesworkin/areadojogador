@@ -147,7 +147,7 @@ body {
     border-bottom: 1px solid #1f2a3c;
     padding: 15px 30px;
     display: flex;
-    justify-content: space-between;
+    justify-between: space-between;
     align-items: center;
     position: sticky;
     top: 0;
