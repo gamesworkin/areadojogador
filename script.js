@@ -580,6 +580,7 @@ function adicionarLinhaSubcategoriaVisual(blocoId, txtLink = "", urlLink = "") {
     containerRows.appendChild(divRow);
 }
 
+// CORREÇÃO: Erro de digitação 'inline.querySelector' corrigido para 'linha.querySelector' para salvar o layout corretamente
 const btnSalvarVisualMenu = document.getElementById('btn-salvar-visual-menu');
 if (btnSalvarVisualMenu) {
     btnSalvarVisualMenu.addEventListener('click', async () => {
@@ -594,7 +595,7 @@ if (btnSalvarVisualMenu) {
             else {
                 const linesSub = bloco.querySelectorAll('.linha-subcategoria-visual');
                 linesSub.forEach(linha => {
-                    const txt = inline.querySelector('.sub-txt').value.trim();
+                    const txt = linha.querySelector('.sub-txt').value.trim();
                     const url = linha.querySelector('.sub-url').value.trim();
                     if (txt && url) subcategorias.push({ texto: txt, url: url });
                     else if (txt || url) dadosValidos = false;
@@ -605,7 +606,7 @@ if (btnSalvarVisualMenu) {
         if (!dadosValidos) { alert("⚠️ Existem campos incompletos no construtor."); return; }
         try {
             await database.ref('configuracao_menu_json').set(estruturaMenuFinal.length > 0 ? JSON.stringify(estruturaMenuFinal, null, 2) : "");
-            alert("🚀 Menu Horizontal updated com sucesso!");
+            alert("🚀 Menu Horizontal atualizado com sucesso!");
         } catch (e) { alert("Erro: " + e.message); }
     });
 }
@@ -639,7 +640,7 @@ if (formCriarCard) {
         };
 
         try {
-            if (idEdicao) { await database.ref(`cards_disponiveis/${idEdicao}`).set(dadosCard); alert("🔄 Card atualizado!"); cancelarEdicaoCard(); }
+            if (idEdicao) { await database.ref(`cards_disponiveis/${idEdicao}`).set(dadosCard); alert("🔄 Card updated!"); cancelarEdicaoCard(); }
             else { await database.ref('cards_disponiveis').push(dadosCard); alert("🎯 Novo Card criado!"); formCriarCard.reset(); }
         } catch (error) { alert("Erro: " + error.message); }
     });
@@ -987,9 +988,7 @@ if (formLoginElement) {
     });
 }
 
-// ==========================================================================
-// ATUALIZADO: INTERCEPTADOR DO MODAL INTERNO DO "ESQUECI MINHA SENHA"
-// ==========================================================================
+// INTERCEPTADOR DO MODAL INTERNO DO "ESQUECI MINHA SENHA"
 const btnEsqueciSenha = document.getElementById('btn-esqueci-senha');
 if (btnEsqueciSenha) {
     btnEsqueciSenha.addEventListener('click', function() {
@@ -1054,9 +1053,7 @@ if (formRecuperarSenhaInterno) {
     });
 }
 
-// ==========================================================================
 // FORMULÁRIO DE CADASTRO (CRIAR CONTA COM FEEDBACK VISUAL)
-// ==========================================================================
 const formCadastroAuth = document.getElementById('form-cadastro-auth');
 if (formCadastroAuth) {
     formCadastroAuth.addEventListener('submit', async function(e) {
@@ -1121,6 +1118,73 @@ if (formCadastroAuth) {
             if (btnCadastrar) {
                 btnCadastrar.innerText = textoBotaoOriginal;
                 btnCadastrar.disabled = false;
+            }
+        }
+    });
+}
+
+// CORREÇÃO: Ouvintes adicionados para Abrir e Fechar as Configurações de Perfil do usuário
+const btnAbrirPerfil = document.getElementById('btn-abrir-perfil');
+if (btnAbrirPerfil) {
+    btnAbrirPerfil.addEventListener('click', function() {
+        if (modalEditarPerfil) {
+            // Popula os dados do cliente atual nos campos do modal antes de abrir
+            document.getElementById('perf-email').value = dadosClienteAtual.email || "";
+            document.getElementById('perf-nome').value = dadosClienteAtual.nome || "";
+            document.getElementById('perf-sobrenome').value = dadosClienteAtual.sobrenome || "";
+            document.getElementById('perf-whatsapp').value = dadosClienteAtual.whatsapp || "";
+            
+            modalEditarPerfil.classList.add('active');
+        }
+    });
+}
+
+const btnFecharPerfil = document.getElementById('btn-fechar-perfil');
+if (btnFecharPerfil) {
+    btnFecharPerfil.addEventListener('click', function() {
+        if (modalEditarPerfil) {
+            modalEditarPerfil.classList.remove('active');
+        }
+    });
+}
+
+// Ouvinte para salvar as alterações do formulário de perfil do cliente
+const formEditarPerfilCliente = document.getElementById('form-editar-perfil-cliente');
+if (formEditarPerfilCliente) {
+    formEditarPerfilCliente.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        if (!usuarioLogadoUid) return;
+        
+        const novoNome = document.getElementById('perf-nome').value.trim();
+        const novoSobrenome = document.getElementById('perf-sobrenome').value.trim();
+        const novoWhatsapp = document.getElementById('perf-whatsapp').value.trim();
+        
+        try {
+            await database.ref(`usuarios/${usuarioLogadoUid}`).update({
+                nome: novoNome,
+                sobrenome: novoSobrenome,
+                whatsapp: novoWhatsapp
+            });
+            alert("⚙️ Perfil atualizado com sucesso!");
+            if (modalEditarPerfil) modalEditarPerfil.classList.remove('active');
+        } catch (error) {
+            alert("Erro ao atualizar perfil: " + error.message);
+        }
+    });
+}
+
+// Ouvinte para o botão de solicitar exclusão de conta dentro do perfil
+const btnSolicitarExclusaoConta = document.getElementById('btn-solicitar-exclusao-conta');
+if (btnSolicitarExclusaoConta) {
+    btnSolicitarExclusaoConta.addEventListener('click', async function() {
+        if (!usuarioLogadoUid) return;
+        if (confirm("🚨 ATENÇÃO CRÍTICA:\nDeseja realmente solicitar o encerramento dos seus dados? Seu acesso será suspenso imediatamente.")) {
+            try {
+                await database.ref(`usuarios/${usuarioLogadoUid}/status_cadastro`).set("solicitou_exclusao");
+                if (modalEditarPerfil) modalEditarPerfil.classList.remove('active');
+            } catch (error) {
+                alert("Erro ao processar solicitação: " + error.message);
             }
         }
     });
