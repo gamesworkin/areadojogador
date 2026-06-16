@@ -26,6 +26,7 @@ const modalFormEnvio = document.getElementById('modal-formulario-envio');
 const modalDetailsContainerGamer = document.getElementById('modal-details-container-gamer');
 const modalDetalhesJogo = document.getElementById('modal-detalhes-jogo');
 const modalEditarPerfil = document.getElementById('modal-editar-perfil');
+const modalEsqueciSenha = document.getElementById('modal-esqueci-senha');
 const gridCardsCliente = document.getElementById('grid-cards-cliente');
 const listaUsuariosAdmin = document.getElementById('lista-usuarios-admin');
 const listaCardsCriados = document.getElementById('lista-cards-criados');
@@ -182,7 +183,7 @@ auth.onAuthStateChanged(user => {
                     const areaPendente = document.getElementById('area-compra-pendente');
                     const caixaAnalise = document.getElementById('caixa-alerta-analise-comprovante');
 
-                    const temPedidosPendentes = dados.pedidos && Object.keys(dados.pedidos).length > 0;
+                    const temPedidosPendentes = dados.pedidos && Object.keys(dadosClienteAtual.pedidos).length > 0;
 
                     if (temPedidosPendentes) {
                         if (areaPendente) areaPendente.style.display = "block";
@@ -604,7 +605,7 @@ if (btnSalvarVisualMenu) {
         if (!dadosValidos) { alert("⚠️ Existem campos incompletos no construtor."); return; }
         try {
             await database.ref('configuracao_menu_json').set(estruturaMenuFinal.length > 0 ? JSON.stringify(estruturaMenuFinal, null, 2) : "");
-            alert("🚀 Menu Horizontal atualizado com sucesso!");
+            alert("🚀 Menu Horizontal updated com sucesso!");
         } catch (e) { alert("Erro: " + e.message); }
     });
 }
@@ -987,34 +988,74 @@ if (formLoginElement) {
 }
 
 // ==========================================================================
-// CORREÇÃO: INTERCEPTADOR DE RECUPERAÇÃO DE SENHA (ESQUECI MINHA SENHA)
+// ATUALIZADO: INTERCEPTADOR DO MODAL INTERNO DO "ESQUECI MINHA SENHA"
 // ==========================================================================
 const btnEsqueciSenha = document.getElementById('btn-esqueci-senha');
 if (btnEsqueciSenha) {
-    btnEsqueciSenha.addEventListener('click', async function() {
+    btnEsqueciSenha.addEventListener('click', function() {
         const emailLogin = document.getElementById('login-email').value.trim();
+        const inputRecuperarEmail = document.getElementById('recuperar-email');
         
-        // Pede a confirmação ou digitação do e-mail via prompt modal padrão do navegador
-        const emailRedefinicao = prompt("Digite o e-mail cadastrado para receber o link de redefinição de senha:", emailLogin);
+        // Copia o valor digitado na tela de login para dentro do modal interno (facilidade para o gamer)
+        if (inputRecuperarEmail) {
+            inputRecuperarEmail.value = emailLogin;
+        }
         
-        if (emailRedefinicao === null) return; // Usuário cancelou o modal
+        if (modalEsqueciSenha) {
+            modalEsqueciSenha.classList.add('active');
+        }
+    });
+}
+
+// Ouvinte para fechar o modal interno ao clicar no "X"
+const btnFecharEsqueciSenha = document.getElementById('btn-fechar-esqueci-senha');
+if (btnFecharEsqueciSenha) {
+    btnFecharEsqueciSenha.addEventListener('click', function() {
+        if (modalEsqueciSenha) {
+            modalEsqueciSenha.classList.remove('active');
+        }
+    });
+}
+
+// Interceptador do formulário de redefinição de senha do modal interno
+const formRecuperarSenhaInterno = document.getElementById('form-recuperar-senha-interno');
+if (formRecuperarSenhaInterno) {
+    formRecuperarSenhaInterno.addEventListener('submit', async function(e) {
+        e.preventDefault();
         
-        if (emailRedefinicao.trim() === "") {
+        const emailRedefinicao = document.getElementById('recuperar-email').value.trim();
+        const btnSubmeterRecuperacao = formRecuperarSenhaInterno.querySelector('button[type="submit"]');
+        
+        if (!emailRedefinicao) {
             alert("⚠️ Por favor, informe um e-mail válido.");
             return;
         }
         
+        let textoOriginalBotao = "";
+        if (btnSubmeterRecuperacao) {
+            textoOriginalBotao = btnSubmeterRecuperacao.innerText;
+            btnSubmeterRecuperacao.innerText = "ENVIANDO LINK...";
+            btnSubmeterRecuperacao.disabled = true;
+        }
+        
         try {
-            await auth.sendPasswordResetEmail(emailRedefinicao.trim());
-            alert("🚀 Link de redefinição enviado com sucesso! Verifique a sua caixa de entrada ou spam.");
+            await auth.sendPasswordResetEmail(emailRedefinicao);
+            alert("🚀 Link de redefinição enviado com sucesso!\nVerifique a sua caixa de entrada ou a pasta de spam.");
+            if (modalEsqueciSenha) modalEsqueciSenha.classList.remove('active');
+            formRecuperarSenhaInterno.reset();
         } catch (erro) {
             alert("Erro ao enviar redefinição: " + erro.message);
+        } finally {
+            if (btnSubmeterRecuperacao) {
+                btnSubmeterRecuperacao.innerText = textoOriginalBotao;
+                btnSubmeterRecuperacao.disabled = false;
+            }
         }
     });
 }
 
 // ==========================================================================
-// CORREÇÃO: FORMULÁRIO DE CADASTRO (CRIAR CONTA COM FEEDBACK VISUAL)
+// FORMULÁRIO DE CADASTRO (CRIAR CONTA COM FEEDBACK VISUAL)
 // ==========================================================================
 const formCadastroAuth = document.getElementById('form-cadastro-auth');
 if (formCadastroAuth) {
