@@ -192,6 +192,16 @@ body {
     text-align: center;
 }
 
+/* Wrapper de transição suave da sanfona da vitrine */
+#wrapper-retratil-vitrine {
+    transition: all 0.3s ease;
+    overflow: hidden;
+}
+
+#wrapper-retratil-vitrine.escondido {
+    display: none;
+}
+
 /* ==========================================================================
    MENU HORIZONTAL SUSPENSO DINÂMICO
    ========================================================================== */
@@ -201,7 +211,7 @@ body {
     border-radius: 6px;
     padding: 10px 15px;
     margin-bottom: 25px;
-    overflow-x: auto;
+    overflow: visible; /* Permitir que submenus vazem a linha do pai no desktop */
 }
 
 .nav-dinamica-list {
@@ -233,6 +243,7 @@ body {
     border: 1px solid transparent;
     transition: all 0.2s ease;
     cursor: pointer;
+    display: block;
 }
 
 .nav-link-item:hover {
@@ -241,11 +252,11 @@ body {
     box-shadow: 0 0 8px rgba(0, 255, 102, 0.3);
 }
 
-/* Ajustes fundamentais do submenu retrátil para funcionar em mobile/desktop */
 .nav-dinamica-item {
     position: relative;
 }
 
+/* Estabilização total do submenu do JSON em cascata */
 .submenu-dinamico {
     display: none;
     position: absolute;
@@ -256,19 +267,25 @@ body {
     padding: 5px 0;
     list-style: none;
     border-radius: 4px;
-    z-index: 1000;
-    min-width: 160px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+    z-index: 9999;
+    min-width: 180px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.6);
+    margin-top: 5px;
+}
+
+.submenu-dinamico li {
+    width: 100%;
 }
 
 .submenu-dinamico li a {
     display: block;
-    padding: 8px 15px;
+    padding: 10px 15px;
     color: #ffffff;
     text-decoration: none;
     font-size: 0.8rem;
     font-weight: bold;
     text-align: left;
+    transition: background 0.2s, color 0.2s;
 }
 
 .submenu-dinamico li a:hover {
@@ -276,13 +293,15 @@ body {
     color: #00ff66;
 }
 
-/* Ativação do menu retrátil ao passar o mouse */
-.nav-dinamica-item:hover .submenu-dinamico {
-    display: block;
+/* Suporte de Hover no Desktop */
+@media (min-width: 601px) {
+    .nav-dinamica-item:hover .submenu-dinamico {
+        display: block !important;
+    }
 }
 
-/* Para dispositivos de toque/mobile, adicionamos suporte também por clique no JS */
-.submenu-visivel .submenu-dinamico {
+/* Suporte de Toggle no Mobile ou por gatilho JS */
+.nav-dinamica-item.submenu-visivel .submenu-dinamico {
     display: block !important;
 }
 
@@ -301,6 +320,22 @@ body {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
     gap: 25px;
+}
+
+/* Nova regra para deixar os cards disponíveis de vendas menores na tela */
+.grid-cards-vitrine {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 15px;
+}
+
+.grid-cards-vitrine .game-card img {
+    height: 200px;
+}
+
+.grid-cards-vitrine .game-card h4 {
+    font-size: 0.85rem;
+    padding: 10px 5px;
 }
 
 .game-card {
@@ -739,6 +774,17 @@ body {
         padding: 0 !important;
     }
 
+    /* Vitrine de compras compactada no celular */
+    .grid-cards-vitrine {
+        grid-template-columns: repeat(3, 1fr) !important;
+        gap: 6px !important;
+        padding: 0 !important;
+    }
+
+    .grid-cards-vitrine .game-card img {
+        height: 110px !important;
+    }
+
     .game-card img {
         height: 130px !important;
         object-fit: cover;
@@ -790,6 +836,7 @@ body {
     .modal-jogos .modal-info {
         padding: 15px !important;
         flex: none !important;
+        min-width: 0 !important;
     }
 
     .modal-jogos #modal-jogo-titulo {
@@ -810,15 +857,19 @@ body {
     .modal-jogos #bloco-pix-dinamico-preview {
         margin-bottom: 10px !important;
         padding: 10px !important;
+        width: 100% !important;
+        min-width: 0 !important;
     }
 
-    /* CORREÇÃO DO PRINT DA CHAVE PIX QUE ESTAVA EM VERTICAL NO MOBILE */
-    #texto-pix-dinamico-preview-real {
+    /* SEGURANÇA CONTRA QUEBRA DE LAYOUT NO COMPRIMENTO DA SENHA E DO PIX */
+    #texto-pix-dinamico-preview-real, 
+    #texto-senha-secreta-real,
+    #texto-chave-pix-checkout {
         word-break: break-all !important;
         white-space: normal !important;
         display: block !important;
         line-height: 1.4 !important;
-        font-size: 0.85rem !important;
+        max-width: 100% !important;
     }
     
     #bloco-pix-dinamico-preview div[style*="display:flex"] {
@@ -826,6 +877,7 @@ body {
         flex-wrap: nowrap !important;
         justify-content: space-between !important;
         align-items: center !important;
+        min-width: 0 !important;
     }
 }
 
