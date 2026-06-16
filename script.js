@@ -163,7 +163,8 @@ auth.onAuthStateChanged(user => {
             ouvirCardsGlobaisAdmin();
             ouvirEPovoarMenuVisualAdmin(); 
         } else {
-            database.ref('usuarios/' + user.uid).on('value', snapshot => {
+            // Mudado para .once() para evitar canais duplicados ou travamentos ao re-logar
+            database.ref('usuarios/' + user.uid).once('value').then(snapshot => {
                 const dados = snapshot.val();
                 if (dados) {
                     dadosClienteAtual = dados;
@@ -253,19 +254,19 @@ function fecharModalJogo() {
 // ==========================================================================
 // SISTEMA DE CÓPIA BLINDADO CORRIGIDO (SEM ERROS DE EXECUÇÃO)
 // ==========================================================================
-function executarCopiaGamerBlindada(textoParaCopiar, elementoBotao) {
+function ejecutarCopiaGamerBlindada(textoParaCopiar, elementoBotao) {
     const textoOriginal = elementoBotao.innerHTML;
     if (navigator.clipboard && window.isSecureContext) {
         navigator.clipboard.writeText(textoParaCopiar).then(() => {
             elementoBotao.innerHTML = "✅ Copiado";
             setTimeout(() => { elementoBotao.innerHTML = textoOriginal; }, 2000);
-        }).catch(() => executarMetodoCopiaAntigo(textoParaCopiar, elementoBotao, textoOriginal));
+        }).catch(() => ejecutarMetodoCopiaAntigo(textoParaCopiar, elementoBotao, textoOriginal));
     } else {
-        executarMetodoCopiaAntigo(textoParaCopiar, elementoBotao, textoOriginal);
+        ejecutarMetodoCopiaAntigo(textoParaCopiar, elementoBotao, textoOriginal);
     }
 }
 
-function executarMetodoCopiaAntigo(texto, botao, textoOrig) {
+function ejecutarMetodoCopiaAntigo(texto, botao, textoOrig) {
     const textarea = document.createElement("textarea");
     textarea.value = texto;
     textarea.style.position = "fixed"; 
@@ -318,7 +319,7 @@ function abrirModalJogo(card, modoLojaVenda = false, cardId = "") {
         if (btnCopiarPixPreview) {
             btnCopiarPixPreview.onclick = (e) => { 
                 e.stopPropagation();
-                executarCopiaGamerBlindada(pixFinalCard, btnCopiarPixPreview); 
+                ejecutarCopiaGamerBlindada(pixFinalCard, btnCopiarPixPreview); 
             };
         }
 
@@ -333,7 +334,6 @@ function abrirModalJogo(card, modoLojaVenda = false, cardId = "") {
                 document.getElementById('texto-preco-modal-checkout').innerText = precoFinalCard;
                 document.getElementById('texto-chave-pix-checkout').innerText = pixFinalCard;
                 
-                // Limpar seleções anteriores de arquivo
                 comprovanteBase64Global = "";
                 if (fileInfoElement) fileInfoElement.innerText = "Nenhum arquivo selecionado";
                 if (inputComprovanteElement) inputComprovanteElement.value = "";
@@ -341,7 +341,7 @@ function abrirModalJogo(card, modoLojaVenda = false, cardId = "") {
                 const btnCopiarCheckout = document.getElementById('btn-copiar-pix-checkout');
                 if (btnCopiarCheckout) {
                     btnCopiarCheckout.onclick = () => {
-                        executarCopiaGamerBlindada(pixFinalCard, btnCopiarCheckout);
+                        ejecutarCopiaGamerBlindada(pixFinalCard, btnCopiarCheckout);
                     };
                 }
                 if (modalFormEnvio) modalFormEnvio.classList.add('active');
@@ -357,7 +357,7 @@ function abrirModalJogo(card, modoLojaVenda = false, cardId = "") {
             }
             if (btnCopiarSenha && textoSenhaReal) {
                 btnCopiarSenha.onclick = () => { 
-                    executarCopiaGamerBlindada(textoSenhaReal.innerText, btnCopiarSenha); 
+                    ejecutarCopiaGamerBlindada(textoSenhaReal.innerText, btnCopiarSenha); 
                 };
             }
         }
@@ -395,10 +395,9 @@ function alimentarSelectComCards(selectElement, jogosJaLiberados = {}) {
 
 function ouvirCardsDoCliente(uid) {
     if (!gridCardsCliente) return;
-    database.ref(`usuarios/${uid}`).on('value', snapshotUsuario => {
+    database.ref(`usuarios/${uid}/jogos_liberados`).on('value', snapshotLiberados => {
         gridCardsCliente.innerHTML = "";
-        const dadosUser = snapshotUsuario.val() || {};
-        const liberados = dadosUser.jogos_liberados || {};
+        const liberados = snapshotLiberados.val() || {};
         const chavesLiberadas = Object.keys(liberados);
 
         chavesLiberadas.forEach(cardId => {
@@ -580,7 +579,7 @@ if (btnSalvarVisualMenu) {
                 const linesSub = bloco.querySelectorAll('.linha-subcategoria-visual');
                 linesSub.forEach(linha => {
                     const txt = linha.querySelector('.sub-txt').value.trim();
-                    const url = inlineUrl = linha.querySelector('.sub-url').value.trim();
+                    const url = linha.querySelector('.sub-url').value.trim();
                     if (txt && url) subcategorias.push({ texto: txt, url: url });
                     else if (txt || url) dadosValidos = false;
                 });
@@ -624,7 +623,7 @@ if (formCriarCard) {
         };
 
         try {
-            if (idEdicao) { await database.ref(`cards_disponiveis/${idEdicao}`).set(dadosCard); alert("🔄 Card atualizado!"); cancelarEdicaoCard(); }
+            if (idEdicao) { await database.ref(`cards_disponiveis/${idEdicao}`).set(dadosCard); alert("🔄 Card updated!"); cancelarEdicaoCard(); }
             else { await database.ref('cards_disponiveis').push(dadosCard); alert("🎯 Novo Card criado!"); formCriarCard.reset(); }
         } catch (error) { alert("Erro: " + error.message); }
     });
@@ -878,13 +877,13 @@ async function excluirSolicitacaoEComprovante(uid) {
 
 async function deslogar() {
     if (confirm("Deseja realmente sair do sistema?")) {
+        // Remove referências locais ativas antes de deslogar do Firebase para evitar loops orfãos
+        usuarioLogadoUid = null;
+        dadosClienteAtual = {};
         await auth.signOut();
     }
 }
 
-// ==========================================================================
-// FUNÇÃO DE LEITURA E VALIDAÇÃO DO ARQUIVO COMPROVANTE
-// ==========================================================================
 function verificarArquivo(arquivo) {
     if (!arquivo || !fileInfoElement) return;
     
@@ -911,6 +910,38 @@ function verificarArquivo(arquivo) {
     leitor.readAsDataURL(arquivo);
 }
 
+// Interceptador e motor lógico do formulário de login corrigido para evitar travamentos
+const formLoginElement = document.getElementById('form-login');
+if (formLoginElement) {
+    formLoginElement.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        const email = document.getElementById('login-email').value.trim();
+        const senha = document.getElementById('login-senha').value;
+        const btnLogar = document.getElementById('btn-logar');
+        
+        if (!email || !senha) {
+            alert("Preencha todos os campos.");
+            return;
+        }
+        
+        if (btnLogar) {
+            btnLogar.innerText = "Logando...";
+            btnLogar.disabled = true;
+        }
+        
+        try {
+            await auth.signInWithEmailAndPassword(email, senha);
+        } catch (erro) {
+            alert("Erro ao autenticar: " + erro.message);
+            if (btnLogar) {
+                btnLogar.innerText = "LOGAR NO HUB";
+                btnLogar.disabled = false;
+            }
+        }
+    });
+}
+
 // Amarrações de escuta contra cliques de segurança visual e proteção contra botões fantasmas
 const btnFecharFormElement = document.getElementById('btn-fechar-form');
 if (btnFecharFormElement) {
@@ -935,14 +966,13 @@ if (dropZoneElement && inputComprovanteElement) {
     };
 }
 
-// Interceptador e transmissor do envio de comprovante corrigido contra recarregamento
 if (formComprovanteElement) {
     formComprovanteElement.addEventListener('submit', async function(e) {
         e.preventDefault();
         
         const cardIdEscolhido = document.getElementById('id-card-escolhido-compra').value;
         if (!cardIdEscolhido) {
-            alert("Erro interno: Nenhhum card foi selecionado para compra.");
+            alert("Erro interno: Nenhum card foi selecionado para compra.");
             return;
         }
         
