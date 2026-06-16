@@ -61,25 +61,30 @@
             </nav>
 
             <div id="area-compra-pendente" class="box-alerta" style="display: none; max-width: 100%; width: 100%;">
-                <h3 id="texto-alerta-titulo" style="margin-bottom: 15px;">🛒 Patches Disponíveis para Adquirir</h3>
-                
-                <div id="grid-vitrine-vendas" class="grid-cards" style="margin-bottom: 20px;"></div>
-                
-                <div id="caixa-pix-geral-backup" style="background: #161c26; border: 1px solid #242f41; padding: 12px; border-radius: 6px; max-width: 340px; margin: 0 auto 10px auto; display: flex; align-items: center; justify-content: space-between; gap: 10px;">
-                    <div style="text-align: left;">
-                        <span style="font-size: 0.75rem; color: #8899a6; display: block; text-transform: uppercase; letter-spacing: 0.5px;">Chave PIX Geral:</span>
-                        <strong id="valor-chave-pix" style="color: #00ff66; font-size: 1.05rem; letter-spacing: 0.5px;">88988470190</strong>
-                    </div>
-                    <button type="button" id="btn-copiar-pix-painel" class="btn-download-dinamico" style="margin:0; padding: 6px 12px; font-size: 0.75rem; border-radius: 4px; cursor: pointer;">📋 Copiar</button>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 1px solid #242f41; padding-bottom: 10px;">
+                    <h3 id="texto-alerta-titulo" style="margin: 0;">🛒 Patches Disponíveis para Adquirir</h3>
+                    <button type="button" id="btn-retrair-vitrine" class="btn-download-dinamico" style="margin: 0; width: auto; padding: 4px 10px; font-size: 0.75rem; border-color: #8899a6; color: #8899a6;">Ocultar Vitrine</button>
                 </div>
-                <p id="texto-alerta-desc" style="font-size: 0.8rem; color: #8899a6;">Selecione um patch acima para ver detalhes e enviar o comprovante.</p>
+                
+                <div id="wrapper-retratil-vitrine">
+                    <div id="grid-vitrine-vendas" class="grid-cards-vitrine" style="margin-bottom: 20px;"></div>
+                    
+                    <div id="caixa-pix-geral-backup" style="background: #161c26; border: 1px solid #242f41; padding: 12px; border-radius: 6px; max-width: 340px; margin: 0 auto 10px auto; display: flex; align-items: center; justify-content: space-between; gap: 10px;">
+                        <div style="text-align: left;">
+                            <span style="font-size: 0.75rem; color: #8899a6; display: block; text-transform: uppercase; letter-spacing: 0.5px;">Chave PIX Geral:</span>
+                            <strong id="valor-chave-pix" style="color: #00ff66; font-size: 1.05rem; letter-spacing: 0.5px;">88988470190</strong>
+                        </div>
+                        <button type="button" id="btn-copiar-pix-painel" class="btn-download-dinamico" style="margin:0; padding: 6px 12px; font-size: 0.75rem; border-radius: 4px; cursor: pointer;">📋 Copiar</button>
+                    </div>
+                    <p id="texto-alerta-desc" style="font-size: 0.8rem; color: #8899a6;">Selecione um patch acima para ver detalhes e enviar o comprovante.</p>
+                </div>
             </div>
 
             <div id="modal-formulario-envio" class="modal-form">
                 <div class="modal-form-content">
                     <div class="modal-form-header">
                         <h3 id="titulo-envio-comprovante-dinamico">Confirmar Pagamento da Pré-Venda</h3>
-                        <button id="btn-fechar-form" class="btn-fechar">&times;</button>
+                        <button type="button" id="btn-fechar-form" class="btn-fechar">&times;</button>
                     </div>
                     
                     <form id="form-comprovante">
@@ -87,9 +92,9 @@
                         <p class="instrucao">Faça o upload do seu comprovante PIX no valor de <strong id="texto-preco-modal-checkout">R$ 10,00</strong> para liberação imediata do patch.</p>
                         
                         <div style="background: #0b0e14; border: 1px solid #242f41; padding: 12px; border-radius: 6px; margin-bottom: 15px; display: flex; align-items: center; justify-content: space-between; gap: 10px; text-align: left;">
-                            <div>
+                            <div style="flex: 1; min-width: 0;">
                                 <span style="font-size: 0.7rem; color: #8899a6; display: block; text-transform: uppercase;">Chave PIX para este Jogo:</span>
-                                <strong id="texto-chave-pix-checkout" style="color: #00ff66; font-size: 0.95rem; font-family: monospace; word-break: break-all;">88988470190</strong>
+                                <strong id="texto-chave-pix-checkout" style="color: #00ff66; font-size: 0.95rem; font-family: monospace; word-break: break-all; display: block;">88988470190</strong>
                             </div>
                             <button type="button" id="btn-copiar-pix-checkout" class="btn-download-dinamico" style="margin:0; padding: 6px 12px; font-size: 0.75rem; border-radius: 4px; flex-shrink: 0;">📋 Copiar</button>
                         </div>
@@ -247,8 +252,7 @@
                         <img id="modal-jogo-capa" src="" alt="Capa" style="width:100%; max-width:260px; height:auto; object-fit:contain; border-radius:6px; box-shadow:0 4px 15px rgba(0,0,0,0.6);">
                     </div>
                     
-                    <div class="modal-info" style="flex:1.2 1 340px; padding:25px; display:flex; flex-direction:column; justify-content:space-between; background:#121824; position:relative;">
-                        <span class="close-modal" onclick="fecharModalJogo()" style="position:absolute; top:15px; right:20px; font-size:1.8rem; cursor:pointer; color:#fff; z-index:10;">&times;</span>
+                    <div class="modal-info" style="flex:1.2 1 340px; padding:25px; display:flex; flex-direction:column; justify-content:space-between; background:#121824; position:relative; min-width: 0;">
                         
                         <div style="margin-top:10px;">
                             <h3 id="modal-jogo-titulo" style="font-size:1.5rem; color:#fff; font-weight:bold; margin-bottom:15px; border-bottom:1px solid #242f41; padding-bottom:10px;">Título</h3>
@@ -256,11 +260,11 @@
                         </div>
                         
                         <div>
-                            <div id="container-senha-protegida-modal" style="margin-bottom:20px; background:#161c26; border:1px solid #242f41; padding:15px; border-radius:6px; text-align:center;">
+                            <div id="container-senha-protegida-modal" style="margin-bottom:20px; background:#161c26; border:1px solid #242f41; padding:15px; border-radius:6px; text-align:center; min-width: 0;">
                                 <button type="button" id="btn-revelar-senha-modal" class="btn-download-dinamico" style="margin:0; width:100%; font-size:0.85rem; border-color:#00ff66; color:#00ff66; border-radius:4px;">🔑 Exibir Senha do Patch</button>
-                                <div id="area-texto-senha-secreta" style="display: none; margin-top:5px; background:#0b0e14; padding:10px; border-radius:4px; border:1px solid #242f41;">
+                                <div id="area-texto-senha-secreta" style="display: none; margin-top:5px; background:#0b0e14; padding:10px; border-radius:4px; border:1px solid #242f41; min-width: 0; word-break: break-all;">
                                     <span style="font-size:0.75rem; color:#8899a6; display:block; text-transform:uppercase; margin-bottom:4px; letter-spacing:0.5px;">Senha de Extração:</span>
-                                    <strong id="texto-senha-secreta-real" style="color:#00ff66; font-size:1.25rem; letter-spacing:1px; display:block; margin-bottom:8px; font-family:monospace;">---</strong>
+                                    <strong id="texto-senha-secreta-real" style="color:#00ff66; font-size:1.25rem; letter-spacing:1px; display:block; margin-bottom:8px; font-family:monospace; word-break: break-all;">---</strong>
                                     <button type="button" id="btn-copiar-senha-modal" class="btn-gamer" style="height:32px; padding:0 15px; font-size:0.8rem; width:auto; display:inline-flex; align-items:center; justify-content:center; border-radius:4px; text-transform:none; letter-spacing:0.5px;">📋 Copiar Chave</button>
                                 </div>
                             </div>
@@ -268,16 +272,18 @@
                             <div id="container-botoes-acao-modal">
                                 <div id="modal-jogo-botoes" class="area-botoes-download" style="display:flex; flex-direction:column; gap:10px;"></div>
                                 
-                                <div id="bloco-pix-dinamico-preview" style="display:none; background:#0b0e14; border:1px solid #242f41; padding:10px; border-radius:6px; margin-bottom:12px; text-align:left;">
-                                    <span style="font-size:0.7rem; color:#8899a6; display:block; text-transform:uppercase; margin-bottom:4px;">Chave PIX deste Patch:</span>
-                                    <div style="display:flex; align-items:center; justify-content:space-between; gap:10px;">
-                                        <strong id="texto-pix-dinamico-preview-real" style="color:#00ff66; font-size:0.9rem; font-family:monospace; word-break:break-all; flex:1;">---</strong>
-                                        <button type="button" id="btn-copiar-pix-preview-dinamico" class="btn-download-dinamico" style="margin:0; padding:4px 8px; font-size:0.7rem; height:28px;">📋 Copiar</button>
+                                <div id="bloco-pix-dinamico-preview" style="display:none; background:#0b0e14; border:1px solid #242f41; padding:10px; border-radius:6px; margin-bottom:12px; text-align:left; min-width: 0;">
+                                    <span style="font-size:0.7rem; color:#8899a6; display:block; text-transform:uppercase; margin-bottom:2px;">Chave PIX deste Patch:</span>
+                                    <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; min-width: 0;">
+                                        <strong id="texto-pix-dinamico-preview-real" style="color:#00ff66; font-size:0.9rem; font-family:monospace; word-break:break-all; flex:1; min-width: 0; display: block;">---</strong>
+                                        <button type="button" id="btn-copiar-pix-preview-dinamico" class="btn-download-dinamico" style="margin:0; padding:4px 8px; font-size:0.7rem; height:28px; width: auto; flex-shrink: 0;">📋 Copiar</button>
                                     </div>
                                 </div>
 
                                 <button type="button" id="btn-adquirir-patch-vitrine" class="btn-gamer" style="width:100%; display:none; background: linear-gradient(135deg, #00ff66 0%, #00aa44 100%); color:#000;">🛒 ADQUIRIR ESTE PATCH (<span id="texto-preco-botao-dinamico">R$ 10,00</span>)</button>
                             </div>
+
+                            <button type="button" onclick="fecharModalJogo()" class="btn-sair" style="width: 100%; margin-top: 15px; height: 40px; padding: 0;">Fechar Janela</button>
                         </div>
                     </div>
                     
