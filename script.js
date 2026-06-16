@@ -601,9 +601,17 @@ function ouvirEConstruirMenuCliente() {
                     aCat.className = 'nav-link-item'; 
                     aCat.innerText = item.categoria;
                     
+                    // Tratamento adaptado para menus retráteis ou links diretos
                     if (item.tipo === "link" && item.url_categoria) { 
                         aCat.href = item.url_categoria; 
                         aCat.target = "_blank"; 
+                    } else if (item.tipo === "menu") {
+                        // Evita o redirecionamento se houver links órfãos e adiciona o controle de clique mobile
+                        aCat.href = "javascript:void(0);";
+                        liCat.addEventListener('click', (e) => {
+                            e.stopPropagation();
+                            liCat.classList.toggle('submenu-visivel');
+                        });
                     }
                     liCat.appendChild(aCat);
                     
@@ -616,6 +624,10 @@ function ouvirEConstruirMenuCliente() {
                             aSub.innerText = sub.texto; 
                             aSub.href = sub.url; 
                             aSub.target = "_blank";
+                            
+                            // Garante que o clique no sublink não feche o menu pai precocemente no mobile
+                            aSub.addEventListener('click', (e) => { e.stopPropagation(); });
+                            
                             liSub.appendChild(aSub); 
                             ulSub.appendChild(liSub);
                         });
@@ -729,8 +741,8 @@ if (btnSalvarVisualMenu) {
             else {
                 const linesSub = bloco.querySelectorAll('.linha-subcategoria-visual');
                 linesSub.forEach(linha => {
-                    const txt = inlineSub = linha.querySelector('.sub-txt').value.trim();
-                    const url = linha.querySelector('.sub-url').value.trim();
+                    const txt = linha.querySelector('.sub-txt').value.trim();
+                    const url = inlineUrl = linha.querySelector('.sub-url').value.trim();
                     if (txt && url) subcategorias.push({ texto: txt, url: url });
                     else if (txt || url) dadosValidos = false;
                 });
@@ -740,7 +752,7 @@ if (btnSalvarVisualMenu) {
         if (!dadosValidos) { alert("⚠️ Existem campos incompletos no construtor."); return; }
         try {
             await database.ref('configuracao_menu_json').set(estruturaMenuFinal.length > 0 ? JSON.stringify(estruturaMenuFinal, null, 2) : "");
-            alert("🚀 Menu Horizontal updated successfully!");
+            alert("🚀 Menu Horizontal atualizado com sucesso!");
         } catch (e) { alert("Erro: " + e.message); }
     });
 }
@@ -1018,7 +1030,7 @@ async function injetarCardParaUsuario(uid) {
             await database.ref(`usuarios/${uid}/jogos_liberados/${selectedCardId}`).set(true);
             alert("🔥 Sucesso! Jogador movido para Aprovados!");
         } else {
-            alert("Status atualizado para PAGO!");
+            alert("Status updated to PAGO!");
         }
     } catch (error) { alert("Erro: " + error.message); }
 }
