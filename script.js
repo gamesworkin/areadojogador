@@ -240,7 +240,6 @@ function povoarVitrineDeVendasCliente(jogosLiberadosUsuario) {
 
         if (totalDisponiveisVenda > 0) {
             areaPendente.style.display = "block";
-            // Mantém os textos originais e integridade intocados
         } else {
             areaPendente.style.display = "none";
         }
@@ -316,7 +315,7 @@ if (formEditarPerfil) {
             await database.ref(`usuarios/${usuarioLogadoUid}/nome`).set(nome);
             await database.ref(`usuarios/${usuarioLogadoUid}/sobrenome`).set(sobrenome);
             await database.ref(`usuarios/${usuarioLogadoUid}/whatsapp`).set(whatsapp);
-            alert("🚀 Perfil atualizado com sucesso!");
+            alert("🚀 Perfil updated successfully!");
             if (modalEditarPerfil) modalEditarPerfil.classList.remove('active');
         } catch(err) { alert("Erro ao atualizar: " + err.message); }
     });
@@ -607,9 +606,9 @@ function ouvirEConstruirMenuCliente() {
         const jsonString = snapshot.val() || "";
         if (!jsonString.trim()) { menuContainer.style.display = "none"; return; }
         try {
-            const categorias = JSON.parse(jsonString);
-            if (Array.isArray(categorias) && categorias.length > 0) {
-                categorias.forEach(item => {
+            const cafeterias = JSON.parse(jsonString);
+            if (Array.isArray(cafeterias) && cafeterias.length > 0) {
+                cafeterias.forEach(item => {
                     const liCat = document.createElement('li'); 
                     liCat.className = 'nav-dinamica-item';
                     
@@ -623,11 +622,9 @@ function ouvirEConstruirMenuCliente() {
                     } else if (item.tipo === "menu") {
                         aCat.href = "javascript:void(0);";
                         
-                        // Evento de clique unificado para mobile e desktop que impede bolha de quebra
                         liCat.addEventListener('click', (e) => {
                             e.stopPropagation();
                             
-                            // Remove a visibilidade de outros submenus abertos antes de alternar o atual
                             document.querySelectorAll('.nav-dinamica-item').forEach(el => {
                                 if (el !== liCat) el.classList.remove('submenu-visivel');
                             });
@@ -662,7 +659,6 @@ function ouvirEConstruirMenuCliente() {
     });
 }
 
-// Fecha submenus ativos se clicar em qualquer lugar vazio da tela
 document.addEventListener('click', () => {
     document.querySelectorAll('.nav-dinamica-item').forEach(el => el.classList.remove('submenu-visivel'));
 });
