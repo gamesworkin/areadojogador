@@ -163,7 +163,7 @@ auth.onAuthStateChanged(user => {
             ouvirCardsGlobaisAdmin();
             ouvirEPovoarMenuVisualAdmin(); 
         } else {
-            // Escuta ativa (.on) para sincronizar e ocultar patches comprados na vitrine imediatamente
+            // Escuta activa (.on) para sincronizar e ocultar patches comprados na vitrine imediatamente
             database.ref('usuarios/' + user.uid).on('value', snapshot => {
                 const dados = snapshot.val();
                 if (dados) {
@@ -275,7 +275,7 @@ function ejecutarCopiaGamerBlindada(textoParaCopiar, elementoBotao) {
         navigator.clipboard.writeText(textoParaCopiar).then(() => {
             elementoBotao.innerHTML = "✅ Copiado";
             setTimeout(() => { elementoBotao.innerHTML = textoOriginal; }, 2000);
-        }).catch(() => executarMetodoCopiaAntigo(textoParaCopiar, elementoBotao, textoOriginal));
+        }).catch(() => ejecutarMetodoCopiaAntigo(textoParaCopiar, elementoBotao, textoOriginal));
     } else {
         executarMetodoCopiaAntigo(textoParaCopiar, elementoBotao, textoOriginal);
     }
@@ -593,7 +593,7 @@ if (btnSalvarVisualMenu) {
             else {
                 const linesSub = bloco.querySelectorAll('.linha-subcategoria-visual');
                 linesSub.forEach(linha => {
-                    const txt = linha.querySelector('.sub-txt').value.trim();
+                    const txt = inline.querySelector('.sub-txt').value.trim();
                     const url = linha.querySelector('.sub-url').value.trim();
                     if (txt && url) subcategorias.push({ texto: txt, url: url });
                     else if (txt || url) dadosValidos = false;
@@ -981,6 +981,105 @@ if (formLoginElement) {
             if (btnLogar) {
                 btnLogar.innerText = "LOGAR NO HUB";
                 btnLogar.disabled = false;
+            }
+        }
+    });
+}
+
+// ==========================================================================
+// CORREÇÃO: INTERCEPTADOR DE RECUPERAÇÃO DE SENHA (ESQUECI MINHA SENHA)
+// ==========================================================================
+const btnEsqueciSenha = document.getElementById('btn-esqueci-senha');
+if (btnEsqueciSenha) {
+    btnEsqueciSenha.addEventListener('click', async function() {
+        const emailLogin = document.getElementById('login-email').value.trim();
+        
+        // Pede a confirmação ou digitação do e-mail via prompt modal padrão do navegador
+        const emailRedefinicao = prompt("Digite o e-mail cadastrado para receber o link de redefinição de senha:", emailLogin);
+        
+        if (emailRedefinicao === null) return; // Usuário cancelou o modal
+        
+        if (emailRedefinicao.trim() === "") {
+            alert("⚠️ Por favor, informe um e-mail válido.");
+            return;
+        }
+        
+        try {
+            await auth.sendPasswordResetEmail(emailRedefinicao.trim());
+            alert("🚀 Link de redefinição enviado com sucesso! Verifique a sua caixa de entrada ou spam.");
+        } catch (erro) {
+            alert("Erro ao enviar redefinição: " + erro.message);
+        }
+    });
+}
+
+// ==========================================================================
+// CORREÇÃO: FORMULÁRIO DE CADASTRO (CRIAR CONTA COM FEEDBACK VISUAL)
+// ==========================================================================
+const formCadastroAuth = document.getElementById('form-cadastro-auth');
+if (formCadastroAuth) {
+    formCadastroAuth.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        const nome = document.getElementById('cad-nome').value.trim();
+        const sobrenome = document.getElementById('cad-sobrenome').value.trim();
+        const whatsapp = document.getElementById('cad-whatsapp').value.trim();
+        const email = document.getElementById('cad-email').value.trim();
+        const senha = document.getElementById('cad-senha').value;
+        const btnCadastrar = formCadastroAuth.querySelector('button[type="submit"]');
+        
+        // Validações básicas de segurança
+        if (!nome || !sobrenome || !whatsapp || !email || !senha) {
+            alert("⚠️ Preencha todos os campos do formulário.");
+            return;
+        }
+        
+        if (!validarProvedorEmail(email)) {
+            alert("⚠️ Por favor, utilize um provedor de e-mail válido (Ex: Gmail, Hotmail, Outlook, Yahoo).");
+            return;
+        }
+        
+        if (senha.length < 6) {
+            alert("⚠️ A senha deve conter no mínimo 6 dígitos.");
+            return;
+        }
+        
+        // Ativa o feedback visual "Criando conta..." no botão (Disparado tanto no clique quanto no Enter)
+        let textoBotaoOriginal = "";
+        if (btnCadastrar) {
+            textoBotaoOriginal = btnCadastrar.innerText;
+            btnCadastrar.innerText = "Criando conta...";
+            btnCadastrar.disabled = true;
+        }
+        
+        try {
+            // 1. Cria a autenticação no Firebase Auth
+            const credencial = await auth.createUserWithEmailAndPassword(email, senha);
+            const uid = credencial.user.uid;
+            
+            // 2. Monta o objeto com a mesma estrutura consumida pelo monitor de sessões (.on)
+            const novosDadosUsuario = {
+                nome: nome,
+                sobrenome: sobrenome,
+                email: email,
+                whatsapp: whatsapp,
+                status_cadastro: "cliente_cadastrado", // Status padrão inicial da base comercial
+                jogos_liberados: {},
+                pedidos: {}
+            };
+            
+            // 3. Grava as propriedades do jogador no Realtime Database
+            await database.ref(`usuarios/${uid}`).set(novosDadosUsuario);
+            
+            alert("🎯 Conta criada com sucesso! Seja bem-vindo ao HUB.");
+            formCadastroAuth.reset();
+            
+        } catch (erro) {
+            alert("Erro ao criar conta: " + erro.message);
+            // Devolve o estado original do botão caso falhe
+            if (btnCadastrar) {
+                btnCadastrar.innerText = textoBotaoOriginal;
+                btnCadastrar.disabled = false;
             }
         }
     });
