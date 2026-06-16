@@ -147,7 +147,7 @@ body {
     border-bottom: 1px solid #1f2a3c;
     padding: 15px 30px;
     display: flex;
-    justify-between: space-between;
+    justify-content: space-between;
     align-items: center;
     position: sticky;
     top: 0;
@@ -851,7 +851,6 @@ body {
         min-width: 0 !important;
     }
 
-    /* SEGURANÇA TOTAL CONTRA QUEBRA DE LINHA NO MOBILE (PIX E SENHA) */
     #texto-pix-dinamico-preview-real, 
     #texto-senha-secreta-real,
     #texto-chave-pix-checkout {
