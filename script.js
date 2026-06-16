@@ -37,6 +37,7 @@ const wrapperRetratilVitrine = document.getElementById('wrapper-retratil-vitrine
 let usuarioLogadoUid = null;
 let dadosClienteAtual = {};
 let filtroAdminAtual = "pendentes";
+let comprovanteBase64Global = "";
 
 // Sistema de Sanfona para recolher a vitrine de compras da Dashboard
 if (btnRetrairVitrine && wrapperRetratilVitrine) {
@@ -197,7 +198,6 @@ auth.onAuthStateChanged(user => {
                     ouvirCardsDoCliente(user.uid);
                     ouvirEConstruunMenuCliente(); 
                     inicializarBotaoWhatsApp();
-                    configurarCopiaPixPainel(); 
                 }
             });
         }
@@ -332,6 +332,11 @@ function abrirModalJogo(card, modoLojaVenda = false, cardId = "") {
                 document.getElementById('titulo-envio-comprovante-dinamico').innerText = `Adquirir: ${card.titulo}`;
                 document.getElementById('texto-preco-modal-checkout').innerText = precoFinalCard;
                 document.getElementById('texto-chave-pix-checkout').innerText = pixFinalCard;
+                
+                // Limpar seleções anteriores de arquivo
+                comprovanteBase64Global = "";
+                if (fileInfoElement) fileInfoElement.innerText = "Nenhum arquivo selecionado";
+                if (inputComprovanteElement) inputComprovanteElement.value = "";
                 
                 const btnCopiarCheckout = document.getElementById('btn-copiar-pix-checkout');
                 if (btnCopiarCheckout) {
@@ -574,8 +579,8 @@ if (btnSalvarVisualMenu) {
             else {
                 const linesSub = bloco.querySelectorAll('.linha-subcategoria-visual');
                 linesSub.forEach(linha => {
-                    const txt = inlineTxt = linha.querySelector('.sub-txt').value.trim();
-                    const url = linha.querySelector('.sub-url').value.trim();
+                    const txt = linha.querySelector('.sub-txt').value.trim();
+                    const url = inlineUrl = linha.querySelector('.sub-url').value.trim();
                     if (txt && url) subcategorias.push({ texto: txt, url: url });
                     else if (txt || url) dadosValidos = false;
                 });
@@ -871,33 +876,39 @@ async function excluirSolicitacaoEComprovante(uid) {
     }
 }
 
-const btnResetGeral = document.getElementById('btn-reset-geral-temporada');
-if (btnResetGeral) {
-    btnResetGeral.addEventListener('click', async () => {
-        const conf1 = confirm("⚠️ ATENÇÃO - FIM DA PRÉ-VENDA:\n\nDeseja continuar?");
-        if (conf1) {
-            try {
-                btnResetGeral.innerText = "ARQUIVANDO TEMPORADA..."; btnResetGeral.disabled = true;
-                const snapshot = await database.ref('usuarios').once('value');
-                const usuarios = snapshot.val();
-                if (usuarios) {
-                    const loteMudancas = {};
-                    Object.keys(usuarios).forEach(uid => {
-                        if (usuarios[uid].email !== "admin@admin.com" && usuarios[uid].status_cadastro === "pago") {
-                            loteMudancas[`usuarios/${uid}/status_cadastro`] = "cliente_cadastrado";
-                            loteMudancas[`usuarios/${uid}/comprovante_base64`] = ""; 
-                            loteMudancas[`usuarios/${uid}/id_card_comprado`] = ""; 
-                        }
-                    });
-                    await database.ref().update(loteMudancas);
-                    alert("🗂️ Temporada encerrada e arquivada com sucesso!");
-                }
-            } catch (error) { alert("Erro no reset geral: " + error.message); }
-            finally {
-                btnResetGeral.innerText = "📦 ARQUIVAR APROVADOS DA TEMPORADA"; btnResetGeral.disabled = false;
-            }
-        }
-    });
+async function deslogar() {
+    if (confirm("Deseja realmente sair do sistema?")) {
+        await auth.signOut();
+    }
+}
+
+// ==========================================================================
+// FUNÇÃO DE LEITURA E VALIDAÇÃO DO ARQUIVO COMPROVANTE
+// ==========================================================================
+function verificarArquivo(arquivo) {
+    if (!arquivo || !fileInfoElement) return;
+    
+    if (arquivo.size > 4 * 1024 * 1024) {
+        alert("⚠️ Arquivo muito grande! O limite máximo permitido é de 4MB.");
+        if (inputComprovanteElement) inputComprovanteElement.value = "";
+        comprovanteBase64Global = "";
+        fileInfoElement.innerText = "Nenhum arquivo selecionado";
+        return;
+    }
+    
+    fileInfoElement.innerText = `Carregando: ${arquivo.name} (${(arquivo.size / 1024).toFixed(1)} KB)...`;
+    
+    const leitor = new FileReader();
+    leitor.onload = function(evento) {
+        comprovanteBase64Global = evento.target.result;
+        fileInfoElement.innerText = `✅ Pronto: ${arquivo.name}`;
+    };
+    leitor.onerror = function() {
+        alert("Erro ao ler o arquivo comprovante.");
+        fileInfoElement.innerText = "Erro no carregamento do arquivo";
+        comprovanteBase64Global = "";
+    };
+    leitor.readAsDataURL(arquivo);
 }
 
 // Amarrações de escuta contra cliques de segurança visual e proteção contra botões fantasmas
@@ -911,6 +922,7 @@ if (btnFecharFormElement) {
 const inputComprovanteElement = document.getElementById('comprovante');
 const dropZoneElement = document.getElementById('drop-zone');
 const fileInfoElement = document.getElementById('file-info');
+const formComprovanteElement = document.getElementById('form-comprovante');
 
 if (dropZoneElement && inputComprovanteElement) {
     dropZoneElement.onclick = function() {
@@ -921,6 +933,59 @@ if (dropZoneElement && inputComprovanteElement) {
             verificarArquivo(e.target.files[0]);
         }
     };
+}
+
+// Interceptador e transmissor do envio de comprovante corrigido contra recarregamento
+if (formComprovanteElement) {
+    formComprovanteElement.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        const cardIdEscolhido = document.getElementById('id-card-escolhido-compra').value;
+        if (!cardIdEscolhido) {
+            alert("Erro interno: Nenhhum card foi selecionado para compra.");
+            return;
+        }
+        
+        if (!comprovanteBase64Global || comprovanteBase64Global.length < 50) {
+            alert("⚠️ Por favor, selecione ou anexe um arquivo de comprovante PIX antes de concluir.");
+            return;
+        }
+        
+        if (!usuarioLogadoUid) {
+            alert("Sua sessão expirou. Logue novamente antes de enviar.");
+            return;
+        }
+        
+        const btnSub = document.getElementById('btn-enviar-tudo');
+        if (btnSub) {
+            btnSub.innerText = "ENVIANDO COMPROVANTE...";
+            btnSub.disabled = true;
+        }
+        
+        try {
+            const atualizacaoDados = {
+                status_cadastro: "comprovante_enviado",
+                id_card_comprado: cardIdEscolhido,
+                comprovante_base64: comprovanteBase64Global
+            };
+            
+            await database.ref(`usuarios/${usuarioLogadoUid}`).update(atualizacaoDados);
+            alert("🚀 Comprovante enviado com sucesso!\nO administrador analisará os dados para liberação imediata.");
+            
+            if (modalFormEnvio) modalFormEnvio.classList.remove('active');
+            if (formComprovanteElement) formComprovanteElement.reset();
+            comprovanteBase64Global = "";
+            if (fileInfoElement) fileInfoElement.innerText = "Nenhum arquivo selecionado";
+            
+        } catch (erro) {
+            alert("Erro de comunicação com o banco: " + erro.message);
+        } finally {
+            if (btnSub) {
+                btnSub.innerText = "CONCLUIR INSCRIÇÃO";
+                btnSub.disabled = false;
+            }
+        }
+    });
 }
 
 document.addEventListener('contextmenu', (e) => {
