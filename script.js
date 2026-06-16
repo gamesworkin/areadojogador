@@ -250,6 +250,38 @@ function fecharModalJogo() {
     if (modalDetailsContainerGamer) modalDetailsContainerGamer.classList.remove('active'); 
 }
 
+// ==========================================================================
+// SISTEMA DE CÓPIA BLINDADO CORRIGIDO (SEM ERROS DE EXECUÇÃO)
+// ==========================================================================
+function executarCopiaGamerBlindada(textoParaCopiar, elementoBotao) {
+    const textoOriginal = elementoBotao.innerHTML;
+    if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(textoParaCopiar).then(() => {
+            elementoBotao.innerHTML = "✅ Copiado";
+            setTimeout(() => { elementoBotao.innerHTML = textoOriginal; }, 2000);
+        }).catch(() => executarMetodoCopiaAntigo(textoParaCopiar, elementoBotao, textoOriginal));
+    } else {
+        executarMetodoCopiaAntigo(textoParaCopiar, elementoBotao, textoOriginal);
+    }
+}
+
+function executarMetodoCopiaAntigo(texto, botao, textoOrig) {
+    const textarea = document.createElement("textarea");
+    textarea.value = texto;
+    textarea.style.position = "fixed"; 
+    textarea.style.opacity = "0";
+    document.body.appendChild(textarea);
+    textarea.select();
+    try { 
+        document.execCommand("copy"); 
+        botao.innerHTML = "✅ Copiado"; 
+    } catch (err) {
+        console.error("Falha ao copiar texto", err);
+    }
+    document.body.removeChild(textarea);
+    setTimeout(() => { botao.innerHTML = textoOrig; }, 2000);
+}
+
 function abrirModalJogo(card, modoLojaVenda = false, cardId = "") {
     const imgCapa = document.getElementById('modal-jogo-capa');
     if (!imgCapa) return;
@@ -319,7 +351,9 @@ function abrirModalJogo(card, modoLojaVenda = false, cardId = "") {
                 btnRevelarSenha.onclick = () => { btnRevelarSenha.style.display = "none"; areaTextoSenha.style.display = "block"; };
             }
             if (btnCopiarSenha && textoSenhaReal) {
-                btnCopiarSenha.onclick = () => { Thermal = executarCopiaGamerBlindada(textoSenhaReal.innerText, btnCopiarSenha); };
+                btnCopiarSenha.onclick = () => { 
+                    executarCopiaGamerBlindada(textoSenhaReal.innerText, btnCopiarSenha); 
+                };
             }
         }
         
@@ -541,7 +575,7 @@ if (btnSalvarVisualMenu) {
                 const linesSub = bloco.querySelectorAll('.linha-subcategoria-visual');
                 linesSub.forEach(linha => {
                     const txt = linha.querySelector('.sub-txt').value.trim();
-                    const url = inlineUrl = linha.querySelector('.sub-url').value.trim();
+                    const url = linha.querySelector('.sub-url').value.trim();
                     if (txt && url) subcategorias.push({ texto: txt, url: url });
                     else if (txt || url) dadosValidos = false;
                 });
@@ -551,7 +585,7 @@ if (btnSalvarVisualMenu) {
         if (!dadosValidos) { alert("⚠️ Existem campos incompletos no construtor."); return; }
         try {
             await database.ref('configuracao_menu_json').set(estruturaMenuFinal.length > 0 ? JSON.stringify(estruturaMenuFinal, null, 2) : "");
-            alert("🚀 Menu Horizontal atualizado com sucesso!");
+            alert("🚀 Menu Horizontal updated successfully!");
         } catch (e) { alert("Erro: " + e.message); }
     });
 }
