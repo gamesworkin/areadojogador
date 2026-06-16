@@ -253,15 +253,14 @@ body {
 
 .nav-dinamica-item {
     position: relative;
-    padding-bottom: 5px; /* Cria uma ponte invisível para o mouse não perder o foco */
+    padding-bottom: 5px;
     margin-bottom: -5px;
 }
 
-/* SUBMENU COLADO PERFEITAMENTE - CORREÇÃO DE DISTÂNCIA */
 .submenu-dinamico {
     display: none;
     position: absolute;
-    top: 100%; /* Fixado colado ao elemento pai */
+    top: 100%;
     left: 0;
     background: #121824;
     border: 1px solid #1f2a3c;
@@ -271,7 +270,7 @@ body {
     z-index: 9999;
     min-width: 180px;
     box-shadow: 0 5px 15px rgba(0,0,0,0.6);
-    margin-top: 0px; /* Removido a distância para não fechar no Hover */
+    margin-top: 0px;
 }
 
 .submenu-dinamico li {
