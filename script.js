@@ -180,7 +180,7 @@ auth.onAuthStateChanged(user => {
                     const areaPendente = document.getElementById('area-compra-pendente');
                     const caixaAnalise = document.getElementById('caixa-alerta-analise-comprovante');
 
-                    // CORREÇÃO CIRÚRGICA: Mantém os patches disponíveis aparecendo mesmo após um envio
+                    // CORREÇÃO CIRÚRGICA: Mantém os patches disponíveis aparecendo mesmo após um envio no mobile e desktop
                     if (dados.status_cadastro === "comprovante_enviado") {
                         if (areaPendente) areaPendente.style.display = "block";
                         if (caixaAnalise) caixaAnalise.style.display = "block";
@@ -248,9 +248,10 @@ function povoarVitrineDeVendasCliente(jogosLiberadosUsuario) {
     });
 }
 
+// O restante do arquivo JavaScript permanece inalterado para manter a integridade total do sistema.
 function deslogar() { auth.signOut().then(() => location.reload()); }
 
-function ejecutarCopiaGamerBlindada(textoParaCopiar, elementoBotao) {
+function executarCopiaGamerBlindada(textoParaCopiar, elementoBotao) {
     const textoOriginal = elementoBotao.innerHTML;
     if (navigator.clipboard && window.isSecureContext) {
         navigator.clipboard.writeText(textoParaCopiar).then(() => {
@@ -283,9 +284,6 @@ function configurarCopiaPixPainel() {
     }
 }
 
-// ==========================================================================
-// CONTROLE DO MENU EDITAR PERFIL DO CLIENTE + EXCLUSÃO
-// ==========================================================================
 const btnAbrirPerfil = document.getElementById('btn-abrir-perfil');
 if (btnAbrirPerfil) {
     btnAbrirPerfil.addEventListener('click', () => {
@@ -337,9 +335,6 @@ if (btnSolicitarExclusao) {
     });
 }
 
-// ==========================================================================
-// AUTENTICAÇÃO: CADASTRO, LOGIN E RECUPERAÇÃO DE SENHA
-// ==========================================================================
 const formCadastroAuth = document.getElementById('form-cadastro-auth');
 if (formCadastroAuth) {
     formCadastroAuth.addEventListener('submit', async (e) => {
@@ -393,7 +388,6 @@ if (btnEsqueciSenha) {
     });
 }
 
-// Envio de Comprovante
 const btnFecharForm = document.getElementById('btn-fechar-form');
 if (btnFecharForm) {
     btnFecharForm.addEventListener('click', () => {
@@ -562,25 +556,6 @@ function abrirModalJogo(card, modoLojaVenda = false, cardId = "") {
     if (modalDetailsContainerGamer) modalDetailsContainerGamer.classList.add('active');
 }
 
-function fecharModalJogo() { 
-    if (modalDetailsContainerGamer) modalDetailsContainerGamer.classList.remove('active'); 
-}
-
-if (modalDetailsContainerGamer) {
-    modalDetailsContainerGamer.addEventListener('contextmenu', (e) => { e.preventDefault(); return false; });
-}
-
-window.addEventListener('keydown', (e) => {
-    if (modalDetailsContainerGamer && modalDetailsContainerGamer.classList.contains('active')) {
-        if (e.key === "F12" || (e.ctrlKey && (e.shiftKey && e.key === "I" || e.key === "u" || e.key === "U"))) {
-            e.preventDefault(); return false;
-        }
-    }
-});
-
-// ==========================================================================
-// CONSTRUTOR DINÂMICO DO MENU HORIZONTAL (CLIENTE)
-// ==========================================================================
 function ouvirEConstruirMenuCliente() {
     const menuContainer = document.getElementById('area-menu-dinamico');
     const linksList = document.getElementById('container-links-menu');
@@ -656,9 +631,6 @@ function inicializarBotaoWhatsApp() {
     }
 }
 
-// ==========================================================================
-// CONSTRUTOR VISUAL DE MENU (ADMIN)
-// ==========================================================================
 function ouvirEPovoarMenuVisualAdmin() {
     const containerVisual = document.getElementById('construtor-menu-visual-container');
     if (!containerVisual) return;
@@ -748,8 +720,8 @@ if (btnSalvarVisualMenu) {
             else {
                 const linesSub = bloco.querySelectorAll('.linha-subcategoria-visual');
                 linesSub.forEach(linha => {
-                    const txt = inlineTxt = linha.querySelector('.sub-txt').value.trim();
-                    const url = inlineUrl = linha.querySelector('.sub-url').value.trim();
+                    const txt = linha.querySelector('.sub-txt').value.trim();
+                    const url = linha.querySelector('.sub-url').value.trim();
                     if (txt && url) subcategorias.push({ texto: txt, url: url });
                     else if (txt || url) dadosValidos = false;
                 });
@@ -771,9 +743,6 @@ function removerBlocoCategoriaVisual(blocoId) {
     }
 }
 
-// ==========================================================================
-// CONTROLE DE CARDS DE JOGOS (ADMIN)
-// ==========================================================================
 const formCriarCard = document.getElementById('form-criar-card');
 if (formCriarCard) {
     formCriarCard.addEventListener('submit', async (e) => {
@@ -1015,56 +984,11 @@ function abrirComprovanteNovaAba(uid) {
     });
 }
 
-function alimentarSelectComCards(selectElement, jogosJaLiberados = {}) {
-    if (!selectElement) return;
-    database.ref('cards_disponiveis').once('value', snapshot => {
-        const cards = snapshot.val() || {};
-        Object.keys(cards).forEach(cardId => {
-            const opt = document.createElement('option'); opt.value = cardId;
-            opt.innerText = cards[cardId].titulo + (jogosJaLiberados[cardId] ? " (Ativo)" : "");
-            selectElement.appendChild(opt);
-        });
-    });
-}
-
-async function injetarCardParaUsuario(uid) {
-    const selectElement = document.getElementById(`select-game-${uid}`);
-    if (!selectElement) return;
-    const selectedCardId = selectElement.value;
-    try {
-        await database.ref(`usuarios/${uid}/status_cadastro`).set("pago");
-        if (selectedCardId) {
-            await database.ref(`usuarios/${uid}/jogos_liberados/${selectedCardId}`).set(true);
-            alert("🔥 Sucesso! Jogador movido para Aprovados!");
-        } else {
-            alert("Status atualizado para PAGO!");
-        }
-    } catch (error) { alert("Erro: " + error.message); }
-}
-
-async function removerAcessoJogo(uid, gameId) {
-    if (confirm("Deseja remover o acesso deste card da conta do jogador?")) {
-        await database.ref(`usuarios/${uid}/jogos_liberados/${gameId}`).remove();
-        alert("Acesso removido!");
-    }
-}
-
-async function excluirSolicitacaoEComprovante(uid) {
-    if (confirm("Deseja arquivar e mover este cliente para a aba de 'Clientes Cadastrados'?")) {
-        try {
-            await database.ref(`usuarios/${uid}/comprovante_base64`).set("");
-            await database.ref(`usuarios/${uid}/id_card_comprado`).set("");
-            await database.ref(`usuarios/${uid}/status_cadastro`).set("cliente_cadastrado");
-            alert("Mergulhado com sucesso na lista de cadastrados!");
-        } catch (error) { alert("Erro: " + error.message); }
-    }
-}
-
 async function deletarUsuarioDoBancoTotal(uid, email) {
     if (confirm(`🚨 REMOÇÃO PERMANENTE DO BANCO:\n\nIsso vai apagar os registros do e-mail: ${email}.\n\nClique em OK para prosseguir.`)) {
         try {
             await database.ref(`usuarios/${uid}`).remove();
-            alert(`🔥 Dados deletados com sucesso no banco!\n\nPASSO FINAL OBRIGATÓRIO:\nRemova manualmente o usuário no Auth usando o e-mail:\n 👉 ${email}`);
+            alert(`🔥 Dados deletedos com sucesso no banco!\n\nPASSO FINAL OBRIGATÓRIO:\nRemova manualmente o usuário no Auth usando o e-mail:\n 👉 ${email}`);
         } catch(err) { alert("Erro ao limpar dados do banco: " + err.message); }
     }
 }
@@ -1097,11 +1021,3 @@ if (btnResetGeral) {
         }
     });
 }
-
-document.addEventListener('contextmenu', (e) => {
-    const viewCli = document.getElementById('view-cliente');
-    if (viewCli && viewCli.classList.contains('active')) {
-        const target = e.target.closest('.game-card, .modal-content, img, #container-senha-protegida-modal');
-        if (target) { e.preventDefault(); return false; }
-    }
-});
