@@ -180,13 +180,11 @@ auth.onAuthStateChanged(user => {
                     const areaPendente = document.getElementById('area-compra-pendente');
                     const caixaAnalise = document.getElementById('caixa-alerta-analise-comprovante');
 
-                    // CORREÇÃO CIRÚRGICA: Mantém os patches disponíveis aparecendo mesmo após um envio no mobile e desktop
                     if (dados.status_cadastro === "comprovante_enviado") {
                         if (areaPendente) areaPendente.style.display = "block";
                         if (caixaAnalise) caixaAnalise.style.display = "block";
                         const cPixGeral = document.getElementById('caixa-pix-geral-backup');
                         if (cPixGeral) cPixGeral.style.display = "none";
-                        
                         povoarVitrineDeVendasCliente(dados.jogos_liberados || {});
                     } else {
                         if (caixaAnalise) caixaAnalise.style.display = "none";
@@ -248,220 +246,8 @@ function povoarVitrineDeVendasCliente(jogosLiberadosUsuario) {
     });
 }
 
-// O restante do arquivo JavaScript permanece inalterado para manter a integridade total do sistema.
-function deslogar() { auth.signOut().then(() => location.reload()); }
-
-function executarCopiaGamerBlindada(textoParaCopiar, elementoBotao) {
-    const textoOriginal = elementoBotao.innerHTML;
-    if (navigator.clipboard && window.isSecureContext) {
-        navigator.clipboard.writeText(textoParaCopiar).then(() => {
-            elementoBotao.innerHTML = "✅ Copiado";
-            setTimeout(() => { elementoBotao.innerHTML = textoOriginal; }, 2000);
-        }).catch(() => executarMetodoCopiaAntigo(textoParaCopiar, elementoBotao, textoOriginal));
-    } else {
-        executarMetodoCopiaAntigo(textoParaCopiar, elementoBotao, textoOriginal);
-    }
-}
-
-function executarMetodoCopiaAntigo(texto, botao, textoOrig) {
-    const textarea = document.createElement("textarea");
-    textarea.value = texto;
-    textarea.style.position = "fixed"; textarea.style.opacity = "0";
-    document.body.appendChild(textarea);
-    textarea.select();
-    try { document.execCommand("copy"); botao.innerHTML = "✅ Copiado"; } catch (err) {}
-    document.body.removeChild(textarea);
-    setTimeout(() => { botao.innerHTML = textoOrig; }, 2000);
-}
-
-function configurarCopiaPixPainel() {
-    const btnCopiarPix = document.getElementById('btn-copiar-pix-painel');
-    if (btnCopiarPix) {
-        btnCopiarPix.onclick = () => {
-            const chaveTexto = document.getElementById('valor-chave-pix').innerText;
-            executarCopiaGamerBlindada(chaveTexto, btnCopiarPix);
-        };
-    }
-}
-
-const btnAbrirPerfil = document.getElementById('btn-abrir-perfil');
-if (btnAbrirPerfil) {
-    btnAbrirPerfil.addEventListener('click', () => {
-        document.getElementById('perf-email').value = dadosClienteAtual.email || "";
-        document.getElementById('perf-nome').value = dadosClienteAtual.nome || "";
-        document.getElementById('perf-sobrenome').value = dadosClienteAtual.sobrenome || "";
-        document.getElementById('perf-whatsapp').value = dadosClienteAtual.whatsapp || "";
-        aplicarMascaraWhats(document.getElementById('perf-whatsapp'));
-        if (modalEditarPerfil) modalEditarPerfil.classList.add('active');
-    });
-}
-
-const btnFecharPerfil = document.getElementById('btn-fechar-perfil');
-if (btnFecharPerfil) {
-    btnFecharPerfil.addEventListener('click', () => {
-        if (modalEditarPerfil) modalEditarPerfil.classList.remove('active');
-    });
-}
-
-const formEditarPerfil = document.getElementById('form-editar-perfil-cliente');
-if (formEditarPerfil) {
-    formEditarPerfil.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const nome = document.getElementById('perf-nome').value.trim();
-        const sobrenome = document.getElementById('perf-sobrenome').value.trim();
-        const whatsapp = perfWhatsApp.value.replace(/\D/g, "");
-        
-        try {
-            await database.ref(`usuarios/${usuarioLogadoUid}/nome`).set(nome);
-            await database.ref(`usuarios/${usuarioLogadoUid}/sobrenome`).set(sobrenome);
-            await database.ref(`usuarios/${usuarioLogadoUid}/whatsapp`).set(whatsapp);
-            alert("🚀 Perfil atualizado com sucesso!");
-            if (modalEditarPerfil) modalEditarPerfil.classList.remove('active');
-        } catch(err) { alert("Erro ao atualizar: " + err.message); }
-    });
-}
-
-const btnSolicitarExclusao = document.getElementById('btn-solicitar-exclusao-conta');
-if (btnSolicitarExclusao) {
-    btnSolicitarExclusao.addEventListener('click', async () => {
-        const conf = confirm("🚨 ATENÇÃO:\n\nTem certeza absoluta de que deseja solicitar a exclusão total da sua conta?\n\nSeu acesso será revogado e os dados limpos pelo administrador.");
-        if (conf) {
-            try {
-                await database.ref(`usuarios/${usuarioLogadoUid}/status_cadastro`).set("solicitou_exclusao");
-                alert("Pedido enviado com sucesso!");
-                if (modalEditarPerfil) modalEditarPerfil.classList.remove('active');
-            } catch(err) { alert("Erro: " + err.message); }
-        }
-    });
-}
-
-const formCadastroAuth = document.getElementById('form-cadastro-auth');
-if (formCadastroAuth) {
-    formCadastroAuth.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const nome = document.getElementById('cad-nome').value.trim();
-        const sobrenome = document.getElementById('cad-sobrenome').value.trim();
-        const whatsapp = inputWhatsApp.value.replace(/\D/g, "");
-        const email = document.getElementById('cad-email').value.trim();
-        const senha = document.getElementById('cad-senha').value;
-
-        if (!validarProvedorEmail(email)) {
-            alert("⚠️ Inscrição Recusada! Utilize um e-mail legítimo convencional.");
-            return;
-        }
-        try {
-            const credencial = await auth.createUserWithEmailAndPassword(email, senha);
-            await database.ref('usuarios/' + credencial.user.uid).set({
-                nome: nome, sobrenome: sobrenome, whatsapp: whatsapp, email: email,
-                status_cadastro: "pendente_pagamento", comprovante_base64: "", jogos_liberados: {}, id_card_comprado: ""
-            });
-        } catch (error) { alert("Erro ao cadastrar: " + error.message); }
-    });
-}
-
-const formLogin = document.getElementById('form-login');
-if (formLogin) {
-    formLogin.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const email = document.getElementById('login-email').value.trim();
-        const senha = loginSenhaReal.value;
-        const btnLogar = document.getElementById('btn-logar');
-        btnLogar.innerText = "LOGANDO... AGUARDE"; btnLogar.disabled = true;
-        try { 
-            await auth.signInWithEmailAndPassword(email, senha); 
-        } catch (error) { 
-            alert("Dados incorretos: " + error.message); 
-            btnLogar.innerText = "LOGAR NO HUB"; btnLogar.disabled = false;
-        }
-    });
-}
-
-const btnEsqueciSenha = document.getElementById('btn-esqueci-senha');
-if (btnEsqueciSenha) {
-    btnEsqueciSenha.addEventListener('click', async () => {
-        const email = document.getElementById('login-email').value.trim();
-        if (!email) { alert("⚠️ Digite o seu e-mail no campo acima."); return; }
-        try {
-            await auth.sendPasswordResetEmail(email);
-            alert(`🚀 Link enviado com sucesso para: ${email}`);
-        } catch (error) { alert("Erro: " + error.message); }
-    });
-}
-
-const btnFecharForm = document.getElementById('btn-fechar-form');
-if (btnFecharForm) {
-    btnFecharForm.addEventListener('click', () => {
-        if (modalFormEnvio) modalFormEnvio.classList.remove('active');
-    });
-}
-
-const inputComprovante = document.getElementById('comprovante');
-const dropZone = document.getElementById('drop-zone');
-const fileInfo = document.getElementById('file-info');
-if (dropZone && inputComprovante) {
-    dropZone.addEventListener('click', () => inputComprovante.click());
-    inputComprovante.addEventListener('change', (e) => verificarArquivo(e.target.files[0]));
-}
-
-function verificarArquivo(file) {
-    if (!file || !fileInfo || !inputComprovante) return;
-    if (file.size > 1048576) { alert("Arquivo maior que 1MB."); inputComprovante.value = ""; return; }
-    fileInfo.innerHTML = `✅ Selecionado: <strong>${file.name}</strong>`;
-}
-
-const converterBase64 = (file) => {
-    return new Promise((resolve, reject) => {
-        const reader = new FileReader(); reader.readAsDataURL(file);
-        reader.onload = () => resolve(reader.result); reader.onerror = (err) => reject(err);
-    });
-};
-
-const formComprovante = document.getElementById('form-comprovante');
-if (formComprovante) {
-    formComprovante.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const arquivo = inputComprovante.files[0];
-        if (!arquivo) return alert("Anexe o arquivo!");
-        const cardEscolhidoId = document.getElementById('id-card-escolhido-compra').value;
-        const btn = document.getElementById('btn-enviar-tudo');
-        btn.innerText = "ENVIANDO..."; btn.disabled = true;
-        try {
-            const base64Str = await converterBase64(arquivo);
-            let base64Final = arquivo.type === "application/pdf" ? base64Str : base64Str.slice(0, 49000);
-            await database.ref(`usuarios/${usuarioLogadoUid}/comprovante_base64`).set(base64Final);
-            await database.ref(`usuarios/${usuarioLogadoUid}/status_cadastro`).set("comprovante_enviado");
-            if (cardEscolhidoId) {
-                await database.ref(`usuarios/${usuarioLogadoUid}/id_card_comprado`).set(cardEscolhidoId);
-            }
-            alert("🚀 Comprovante enviado com sucesso! Aguarde a liberação do administrador.");
-            if (modalFormEnvio) modalFormEnvio.classList.remove('active');
-        } catch (error) { alert("Erro: " + error.message); }
-        finally { btn.innerText = "CONCLUIR INSCRIÇÃO"; btn.disabled = false; }
-    });
-}
-
-function ouvirCardsDoCliente(uid) {
-    if (!gridCardsCliente) return;
-    database.ref(`usuarios/${uid}`).on('value', snapshotUsuario => {
-        gridCardsCliente.innerHTML = "";
-        const dadosUser = snapshotUsuario.val() || {};
-        const liberados = dadosUser.jogos_liberados || {};
-        const chavesLiberadas = Object.keys(liberados);
-
-        chavesLiberadas.forEach(cardId => {
-            database.ref(`cards_disponiveis/${cardId}`).once('value', cardSnap => {
-                const card = cardSnap.val();
-                if (card) {
-                    const cardElement = document.createElement('div');
-                    cardElement.className = 'game-card';
-                    cardElement.innerHTML = `<img src="${card.capa_url}"><h4>${card.titulo}</h4>`;
-                    cardElement.addEventListener('contextmenu', (e) => { e.preventDefault(); return false; });
-                    cardElement.addEventListener('click', () => abrirModalJogo(card, false));
-                    gridCardsCliente.appendChild(cardElement);
-                }
-            });
-        });
-    });
+function fecharModalJogo() { 
+    if (modalDetailsContainerGamer) modalDetailsContainerGamer.classList.remove('active'); 
 }
 
 function abrirModalJogo(card, modoLojaVenda = false, cardId = "") {
@@ -533,7 +319,7 @@ function abrirModalJogo(card, modoLojaVenda = false, cardId = "") {
                 btnRevelarSenha.onclick = () => { btnRevelarSenha.style.display = "none"; areaTextoSenha.style.display = "block"; };
             }
             if (btnCopiarSenha && textoSenhaReal) {
-                btnCopiarSenha.onclick = () => { executarCopiaGamerBlindada(textoSenhaReal.innerText, btnCopiarSenha); };
+                btnCopiarSenha.onclick = () => { Thermal = executarCopiaGamerBlindada(textoSenhaReal.innerText, btnCopiarSenha); };
             }
         }
         
@@ -554,6 +340,42 @@ function abrirModalJogo(card, modoLojaVenda = false, cardId = "") {
         }
     }
     if (modalDetailsContainerGamer) modalDetailsContainerGamer.classList.add('active');
+}
+
+function alimentarSelectComCards(selectElement, jogosJaLiberados = {}) {
+    if (!selectElement) return;
+    database.ref('cards_disponiveis').once('value', snapshot => {
+        const cards = snapshot.val() || {};
+        Object.keys(cards).forEach(cardId => {
+            const opt = document.createElement('option'); opt.value = cardId;
+            opt.innerText = cards[cardId].titulo + (jogosJaLiberados[cardId] ? " (Ativo)" : "");
+            selectElement.appendChild(opt);
+        });
+    });
+}
+
+function ouvirCardsDoCliente(uid) {
+    if (!gridCardsCliente) return;
+    database.ref(`usuarios/${uid}`).on('value', snapshotUsuario => {
+        gridCardsCliente.innerHTML = "";
+        const dadosUser = snapshotUsuario.val() || {};
+        const liberados = dadosUser.jogos_liberados || {};
+        const chavesLiberadas = Object.keys(liberados);
+
+        chavesLiberadas.forEach(cardId => {
+            database.ref(`cards_disponiveis/${cardId}`).once('value', cardSnap => {
+                const card = cardSnap.val();
+                if (card) {
+                    const cardElement = document.createElement('div');
+                    cardElement.className = 'game-card';
+                    cardElement.innerHTML = `<img src="${card.capa_url}"><h4>${card.titulo}</h4>`;
+                    cardElement.addEventListener('contextmenu', (e) => { e.preventDefault(); return false; });
+                    cardElement.addEventListener('click', () => abrirModalJogo(card, false));
+                    gridCardsCliente.appendChild(cardElement);
+                }
+            });
+        });
+    });
 }
 
 function ouvirEConstruirMenuCliente() {
@@ -584,11 +406,9 @@ function ouvirEConstruirMenuCliente() {
                         
                         liCat.addEventListener('click', (e) => {
                             e.stopPropagation();
-                            
                             document.querySelectorAll('.nav-dinamica-item').forEach(el => {
                                 if (el !== liCat) el.classList.remove('submenu-visivel');
                             });
-                            
                             liCat.classList.toggle('submenu-visivel');
                         });
                     }
@@ -721,7 +541,7 @@ if (btnSalvarVisualMenu) {
                 const linesSub = bloco.querySelectorAll('.linha-subcategoria-visual');
                 linesSub.forEach(linha => {
                     const txt = linha.querySelector('.sub-txt').value.trim();
-                    const url = linha.querySelector('.sub-url').value.trim();
+                    const url = inlineUrl = linha.querySelector('.sub-url').value.trim();
                     if (txt && url) subcategorias.push({ texto: txt, url: url });
                     else if (txt || url) dadosValidos = false;
                 });
@@ -988,7 +808,7 @@ async function deletarUsuarioDoBancoTotal(uid, email) {
     if (confirm(`🚨 REMOÇÃO PERMANENTE DO BANCO:\n\nIsso vai apagar os registros do e-mail: ${email}.\n\nClique em OK para prosseguir.`)) {
         try {
             await database.ref(`usuarios/${uid}`).remove();
-            alert(`🔥 Dados deletedos com sucesso no banco!\n\nPASSO FINAL OBRIGATÓRIO:\nRemova manualmente o usuário no Auth usando o e-mail:\n 👉 ${email}`);
+            alert(`🔥 Dados deletados com sucesso no banco!\n\nPASSO FINAL OBRIGATÓRIO:\nRemova manualmente o usuário no Auth usando o e-mail:\n 👉 ${email}`);
         } catch(err) { alert("Erro ao limpar dados do banco: " + err.message); }
     }
 }
@@ -1021,3 +841,11 @@ if (btnResetGeral) {
         }
     });
 }
+
+document.addEventListener('contextmenu', (e) => {
+    const viewCli = document.getElementById('view-cliente');
+    if (viewCli && viewCli.classList.contains('active')) {
+        const target = e.target.closest('.game-card, .modal-content, img, #container-senha-protegida-modal');
+        if (target) { e.preventDefault(); return false; }
+    }
+});
