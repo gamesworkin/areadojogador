@@ -178,16 +178,18 @@ auth.onAuthStateChanged(user => {
                     }
                     
                     const areaPendente = document.getElementById('area-compra-pendente');
+                    const caixaAnalise = document.getElementById('caixa-alerta-analise-comprovante');
 
+                    // CORREÇÃO CIRÚRGICA: Mantém os patches disponíveis aparecendo mesmo após um envio
                     if (dados.status_cadastro === "comprovante_enviado") {
                         if (areaPendente) areaPendente.style.display = "block";
+                        if (caixaAnalise) caixaAnalise.style.display = "block";
                         const cPixGeral = document.getElementById('caixa-pix-geral-backup');
                         if (cPixGeral) cPixGeral.style.display = "none";
-                        document.getElementById('texto-alerta-titulo').innerText = "⏳ Comprovante em Análise";
-                        document.getElementById('texto-alerta-desc').innerText = "Seu comprovante foi enviado com sucesso. Aguarde a validação do administrador.";
-                        const gridVitrine = document.getElementById('grid-vitrine-vendas');
-                        if (gridVitrine) gridVitrine.innerHTML = "";
+                        
+                        povoarVitrineDeVendasCliente(dados.jogos_liberados || {});
                     } else {
+                        if (caixaAnalise) caixaAnalise.style.display = "none";
                         const cPixGeral = document.getElementById('caixa-pix-geral-backup');
                         if (cPixGeral) cPixGeral.style.display = "none";
                         povoarVitrineDeVendasCliente(dados.jogos_liberados || {});
@@ -240,7 +242,7 @@ function povoarVitrineDeVendasCliente(jogosLiberadosUsuario) {
 
         if (totalDisponiveisVenda > 0) {
             areaPendente.style.display = "block";
-        } else {
+        } else if (dadosClienteAtual.status_cadastro !== "comprovante_enviado") {
             areaPendente.style.display = "none";
         }
     });
@@ -248,7 +250,7 @@ function povoarVitrineDeVendasCliente(jogosLiberadosUsuario) {
 
 function deslogar() { auth.signOut().then(() => location.reload()); }
 
-function executarCopiaGamerBlindada(textoParaCopiar, elementoBotao) {
+function ejecutarCopiaGamerBlindada(textoParaCopiar, elementoBotao) {
     const textoOriginal = elementoBotao.innerHTML;
     if (navigator.clipboard && window.isSecureContext) {
         navigator.clipboard.writeText(textoParaCopiar).then(() => {
@@ -315,7 +317,7 @@ if (formEditarPerfil) {
             await database.ref(`usuarios/${usuarioLogadoUid}/nome`).set(nome);
             await database.ref(`usuarios/${usuarioLogadoUid}/sobrenome`).set(sobrenome);
             await database.ref(`usuarios/${usuarioLogadoUid}/whatsapp`).set(whatsapp);
-            alert("🚀 Perfil updated successfully!");
+            alert("🚀 Perfil atualizado com sucesso!");
             if (modalEditarPerfil) modalEditarPerfil.classList.remove('active');
         } catch(err) { alert("Erro ao atualizar: " + err.message); }
     });
@@ -451,23 +453,6 @@ function ouvirCardsDoCliente(uid) {
         const dadosUser = snapshotUsuario.val() || {};
         const liberados = dadosUser.jogos_liberados || {};
         const chavesLiberadas = Object.keys(liberados);
-
-        if (dadosUser.status_cadastro === "comprovante_enviado" && chavesLiberadas.length === 0) {
-            const cardElement = document.createElement('div');
-            cardElement.className = 'game-card';
-            cardElement.style.borderColor = "#00ff66";
-            cardElement.innerHTML = `
-                <div style="height:280px; display:flex; align-items:center; justify-content:center; background:#161c26;">
-                    <span style="font-size:4rem;">⏳</span>
-                </div>
-                <h4>Analisando Comprovante...</h4>
-            `;
-            cardElement.addEventListener('click', () => {
-                alert("🎮 SEU ACESSO ESTÁ SENDO ANALISADO!\n\nRecebemos o seu comprovante PIX com sucesso. Nossa equipe está validando o pagamento para injetar o seu Card de jogo aqui no painel.");
-            });
-            gridCardsCliente.appendChild(cardElement);
-            return;
-        }
 
         chavesLiberadas.forEach(cardId => {
             database.ref(`cards_disponiveis/${cardId}`).once('value', cardSnap => {
@@ -606,9 +591,9 @@ function ouvirEConstruirMenuCliente() {
         const jsonString = snapshot.val() || "";
         if (!jsonString.trim()) { menuContainer.style.display = "none"; return; }
         try {
-            const cafeterias = JSON.parse(jsonString);
-            if (Array.isArray(cafeterias) && cafeterias.length > 0) {
-                cafeterias.forEach(item => {
+            const categorias = JSON.parse(jsonString);
+            if (Array.isArray(categorias) && categorias.length > 0) {
+                categorias.forEach(item => {
                     const liCat = document.createElement('li'); 
                     liCat.className = 'nav-dinamica-item';
                     
@@ -763,8 +748,8 @@ if (btnSalvarVisualMenu) {
             else {
                 const linesSub = bloco.querySelectorAll('.linha-subcategoria-visual');
                 linesSub.forEach(linha => {
-                    const txt = linha.querySelector('.sub-txt').value.trim();
-                    const url = linha.querySelector('.sub-url').value.trim();
+                    const txt = inlineTxt = linha.querySelector('.sub-txt').value.trim();
+                    const url = inlineUrl = linha.querySelector('.sub-url').value.trim();
                     if (txt && url) subcategorias.push({ texto: txt, url: url });
                     else if (txt || url) dadosValidos = false;
                 });
