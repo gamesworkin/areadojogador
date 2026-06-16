@@ -163,7 +163,6 @@ auth.onAuthStateChanged(user => {
             ouvirCardsGlobaisAdmin();
             ouvirEPovoarMenuVisualAdmin(); 
         } else {
-            // Mudado para .once() para evitar canais duplicados ou travamentos ao re-logar
             database.ref('usuarios/' + user.uid).once('value').then(snapshot => {
                 const dados = snapshot.val();
                 if (dados) {
@@ -182,19 +181,17 @@ auth.onAuthStateChanged(user => {
                     const areaPendente = document.getElementById('area-compra-pendente');
                     const caixaAnalise = document.getElementById('caixa-alerta-analise-comprovante');
 
-                    if (dados.status_cadastro === "comprovante_enviado") {
+                    // Verifica se o usuário tem alguma solicitação na coleção de pedidos
+                    const temPedidosPendentes = dados.pedidos && Object.keys(dados.pedidos).length > 0;
+
+                    if (temPedidosPendentes) {
                         if (areaPendente) areaPendente.style.display = "block";
                         if (caixaAnalise) caixaAnalise.style.display = "block";
-                        const cPixGeral = document.getElementById('caixa-pix-geral-backup');
-                        if (cPixGeral) cPixGeral.style.display = "none";
-                        povoarVitrineDeVendasCliente(dados.jogos_liberados || {});
                     } else {
                         if (caixaAnalise) caixaAnalise.style.display = "none";
-                        const cPixGeral = document.getElementById('caixa-pix-geral-backup');
-                        if (cPixGeral) cPixGeral.style.display = "none";
-                        povoarVitrineDeVendasCliente(dados.jogos_liberados || {});
                     }
                     
+                    povoarVitrineDeVendasCliente(dados.jogos_liberados || {});
                     irParaTela(viewCliente);
                     ouvirCardsDoCliente(user.uid);
                     ouvirEConstruunMenuCliente(); 
@@ -239,9 +236,11 @@ function povoarVitrineDeVendasCliente(jogosLiberadosUsuario) {
             }
         });
 
-        if (totalDisponiveisVenda > 0) {
+        const temPedidos = dadosClienteAtual.pedidos && Object.keys(dadosClienteAtual.pedidos).length > 0;
+
+        if (totalDisponiveisVenda > 0 || temPedidos) {
             areaPendente.style.display = "block";
-        } else if (dadosClienteAtual.status_cadastro !== "comprovante_enviado") {
+        } else {
             areaPendente.style.display = "none";
         }
     });
@@ -260,9 +259,9 @@ function ejecutarCopiaGamerBlindada(textoParaCopiar, elementoBotao) {
         navigator.clipboard.writeText(textoParaCopiar).then(() => {
             elementoBotao.innerHTML = "✅ Copiado";
             setTimeout(() => { elementoBotao.innerHTML = textoOriginal; }, 2000);
-        }).catch(() => ejecutarMetodoCopiaAntigo(textoParaCopiar, elementoBotao, textoOriginal));
+        }).catch(() => executarMetodoCopiaAntigo(textoParaCopiar, elementoBotao, textoOriginal));
     } else {
-        ejecutarMetodoCopiaAntigo(textoParaCopiar, elementoBotao, textoOriginal);
+        executarMetodoCopiaAntigo(textoParaCopiar, elementoBotao, textoOriginal);
     }
 }
 
@@ -589,7 +588,7 @@ if (btnSalvarVisualMenu) {
         if (!dadosValidos) { alert("⚠️ Existem campos incompletos no construtor."); return; }
         try {
             await database.ref('configuracao_menu_json').set(estruturaMenuFinal.length > 0 ? JSON.stringify(estruturaMenuFinal, null, 2) : "");
-            alert("🚀 Menu Horizontal atualizado com sucesso!");
+            alert("🚀 Menu Horizontal updated successfully!");
         } catch (e) { alert("Erro: " + e.message); }
     });
 }
@@ -700,6 +699,9 @@ if (btnExportarCards) {
     });
 }
 
+// ==========================================================================
+// PAINEL ADMINISTRATIVO COM SUPORTE A MÚLTIPLOS PEDIDOS POR USUÁRIO
+// ==========================================================================
 function inicializarPainelAdmin() {
     if (!listaUsuariosAdmin) return;
     database.ref('cards_disponiveis').once('value', snapshotCards => {
@@ -715,22 +717,12 @@ function inicializarPainelAdmin() {
                 if (users[uid].email === "admin@admin.com") return;
 
                 const status = users[uid].status_cadastro || 'pendente_pagamento';
+                const temPedidos = users[uid].pedidos && Object.keys(users[uid].pedidos).length > 0;
 
-                if (filtroAdminAtual === "pendentes" && status === "pago") return;
-                if (filtroAdminAtual === "pendentes" && status === "cliente_cadastrado") return;
-                if (filtroAdminAtual === "pendentes" && status === "solicitou_exclusao") return; 
-                
+                // Regras de filtros das Abas do Admin
+                if (filtroAdminAtual === "pendentes" && !temPedidos) return;
                 if (filtroAdminAtual === "concluidos" && status !== "pago") return;
-                
                 if (filtroAdminAtual === "cadastrados" && status !== "cliente_cadastrado" && status !== "solicitou_exclusao") return;
-
-                contagemFiltrados++;
-                const userBox = document.createElement('div'); 
-                userBox.className = 'user-item';
-
-                if (status === "solicitou_exclusao") {
-                    userBox.style.border = "2px solid #ff3333";
-                }
 
                 let listaJogosAtivosHtml = "";
                 const jogos = users[uid].jogos_liberados || {};
@@ -738,100 +730,117 @@ function inicializarPainelAdmin() {
                 if (keysJogos.length === 0) { listaJogosAtivosHtml = "<li style='color:#ff3333;'>Nenhum card ativo</li>"; }
                 else {
                     keysJogos.forEach(gameId => {
-                        listaJogosAtivosHtml += `<li style="display:flex; justify-content:space-between; align-items:center; background:#141d26; padding:5px; margin:3px 0; border-radius:4px; font-size:0.8rem;"><span>🎮 ID: ${gameId.slice(-6)}...</span><button onclick="removerAcessoJogo('${uid}', '${gameId}')" style="background:none; border:none; color:#ff3333; cursor:pointer;">[Remover]</button></li>`;
+                        const tituloJogo = cacheCardsGlobais[gameId] ? cacheCardsGlobais[gameId].titulo : `ID: ${gameId.slice(-6)}`;
+                        listaJogosAtivosHtml += `<li style="display:flex; justify-content:space-between; align-items:center; background:#141d26; padding:5px; margin:3px 0; border-radius:4px; font-size:0.8rem;"><span>🎮 ${tituloJogo}</span><button onclick="removerAcessoJogo('${uid}', '${gameId}')" style="background:none; border:none; color:#ff3333; cursor:pointer;">[Remover]</button></li>`;
                     });
                 }
 
                 const estiloGamerSelectCorrigido = `style="width:100%; height:40px; background:#1c2434; border:1px solid #242f41; border-radius:4px; color:#fff; padding:0 10px; margin-bottom:10px; font-size:0.85rem;"`;
 
                 if (filtroAdminAtual === "pendentes") {
-                    const temComp = users[uid].comprovante_base64 && users[uid].comprovante_base64.length > 10;
-                    const btnComp = temComp 
-                        ? `<button class="btn-visualizar-comprovante" onclick="abrirComprovanteNovaAba('${uid}')">👁️ Ver Comprovante Enviado</button>`
-                        : `<p style="color:#00ff66; font-size:0.8rem; margin:5px 0;">⏳ Aguardando comprovante PIX...</p>`;
+                    // Renderiza blocos individuais para cada pedido feito pelo usuário
+                    Object.keys(users[uid].pedidos).forEach(pedidoId => {
+                        contagemFiltrados++;
+                        const pedido = users[uid].pedidos[pedidoId];
+                        const idCardComprado = pedido.id_card_comprado;
+                        const dadosCard = cacheCardsGlobais[idCardComprado];
 
-                    let tagJogoEscolhidoLoja = "";
-                    const idComprado = users[uid].id_card_comprado;
-                    if (idComprado && cacheCardsGlobais[idComprado]) {
-                        const vlr = cacheCardsGlobais[idComprado].preco || "R$ 10,00";
-                        tagJogoEscolhidoLoja = `<p style="background:#132219; border:1px solid #00ff66; color:#00ff66; padding:6px; border-radius:4px; font-size:0.85rem; margin-bottom:10px;">🎯 <strong>Patch Escolhido:</strong> ${cacheCardsGlobais[idComprado].titulo} (${vlr})</p>`;
-                    }
+                        const userBox = document.createElement('div');
+                        userBox.className = 'user-item';
+                        userBox.style.borderLeft = "4px solid #ffcc00";
 
-                    userBox.innerHTML = `
-                        <div class="user-info">
-                            <p><strong>Jogador:</strong> ${users[uid].nome} ${users[uid].sobrenome}</p>
-                            <p><strong>E-mail:</strong> ${users[uid].email}</p>
-                            <p><strong>WhatsApp:</strong> ${users[uid].whatsapp || 'Não cadastrado'}</p>
-                            <p><strong>Status Antigo:</strong> <span style="color:#00ff66">${status.toUpperCase()}</span></p>
-                            ${tagJogoEscolhidoLoja}
-                            ${btnComp}
-                        </div>
-                        <select id="select-game-${uid}" ${estiloGamerSelectCorrigido}><option value="${idComprado || ''}">${idComprado && cacheCardsGlobais[idComprado] ? 'Injetar: ' + cacheCardsGlobais[idComprado].titulo : '-- Selecione o Card para Injetar --'}</option></select>
-                        <button class="btn-inject" onclick="injetarCardParaUsuario('${uid}')">Confirmar Pagamento & Mover para Aprovados</button>
-                        <button class="btn-sair" onclick="deletarUsuarioDoBancoTotal('${uid}', '${users[uid].email}')" style="width:100%; font-size:0.8rem; padding:6px; margin-top:5px; background:#211212; border:1px dashed #ff3333; color:#ff5555;">🗑️ Excluir Conta permanentemente</button>
-                    `;
-                } else if (filtroAdminAtual === "concluidos") {
-                    userBox.innerHTML = `
-                        <div class="user-info">
-                            <p><strong>🏆 Jogador Ativo (Temporada):</strong> ${users[uid].nome} ${users[uid].sobrenome}</p>
-                            <p><strong>WhatsApp:</strong> ${users[uid].whatsapp || 'Não cadastrado'}</p>
-                            <p><strong>E-mail:</strong> ${users[uid].email}</p>
-                            <div style="margin: 10px 0; background:#1b2430; padding:8px; border-radius:4px;">
-                                <p style="margin:0 0 5px 0; font-size:0.8rem; color:#00ff66;">Cards Ativos na Conta:</p>
-                                <ul style="margin:0; padding:0; list-style:none;">${listaJogosAtivosHtml}</ul>
+                        const tagJogoEscolhidoLoja = dadosCard
+                            ? `<p style="background:#132219; border:1px solid #00ff66; color:#00ff66; padding:6px; border-radius:4px; font-size:0.85rem; margin-bottom:10px;">🎯 <strong>Patch Solicitado:</strong> ${dadosCard.titulo} (${dadosCard.preco || 'R$ 10,00'})</p>`
+                            : `<p style="background:#221313; border:1px solid #ff3333; color:#ff3333; padding:6px; border-radius:4px; font-size:0.85rem; margin-bottom:10px;">⚠️ Card do Patch removido do sistema.</p>`;
+
+                        const btnComp = pedido.comprovante_base64 && pedido.comprovante_base64.length > 10
+                            ? `<button class="btn-visualizar-comprovante" onclick="abrirComprovantePedidoNovaAba('${uid}', '${pedidoId}')">👁️ Ver Comprovante Enviado</button>`
+                            : `<p style="color:#ff3333; font-size:0.8rem; margin:5px 0;">Erro: Sem arquivo anexado.</p>`;
+
+                        userBox.innerHTML = `
+                            <div class="user-info">
+                                <p><strong>Jogador:</strong> ${users[uid].nome} ${users[uid].sobrenome}</p>
+                                <p><strong>E-mail:</strong> ${users[uid].email}</p>
+                                <p><strong>WhatsApp:</strong> ${users[uid].whatsapp || 'Não cadastrado'}</p>
+                                ${tagJogoEscolhidoLoja}
+                                ${btnComp}
                             </div>
-                        </div>
-                        <div style="display:flex; gap:5px; align-items:center; margin-bottom:10px;">
-                            <select id="select-game-${uid}" ${estiloGamerSelectCorrigido} style="margin:0; flex:1; height:40px;"><option value="">+ Injetar Card Extra</option></select>
-                            <button class="btn-gamer" onclick="injetarCardParaUsuario('${uid}')" style="margin:0; height:40px; width:45px; padding:0;">+</button>
-                        </div>
-                        <button class="btn-sair" onclick="excluirSolicitacaoEComprovante('${uid}')" style="width:100%; font-size:0.8rem; padding:6px; background:#2d1313; border:1px solid #ff3333; color:#ff3333;">📦 Mover Manualmente para Cadastrados (Recuar)</button>
-                    `;
+                            <button class="btn-inject" onclick="aprovarPedidoEspecifico('${uid}', '${pedidoId}', '${idCardComprado}')">Confirmar Pagamento & Liberar Patch</button>
+                            <button class="btn-sair" onclick="recusarPedidoEspecifico('${uid}', '${pedidoId}')" style="width:100%; font-size:0.8rem; padding:6px; margin-top:5px; background:#211212; border:1px dashed #ff3333; color:#ff5555;">❌ Recusar/Deletar esta solicitação</button>
+                        `;
+                        listaUsuariosAdmin.appendChild(userBox);
+                    });
                 } else {
-                    let botoesAbaCadastrados = `
-                        <div style="display:flex; gap:5px; align-items:center;">
-                            <select id="select-game-${uid}" ${estiloGamerSelectCorrigido} style="margin:0; flex:1; height:40px;"><option value="">Injetar Novo Patch Direto</option></select>
-                            <button class="btn-gamer" onclick="injetarCardParaUsuario('${uid}')" style="margin:0; height:40px; width:45px; padding:0;">+</button>
-                        </div>
-                    `;
+                    contagemFiltrados++;
+                    const userBox = document.createElement('div');
+                    userBox.className = 'user-item';
 
                     if (status === "solicitou_exclusao") {
-                        botoesAbaCadastrados = `
-                            <div style="background:#281216; border:1px solid #ff3333; padding:10px; border-radius:4px; text-align:center;">
-                                <p style="color:#ff3333; font-weight:bold; font-size:0.85rem; margin-bottom:8px;">⚠️ O USUÁRIO SOLICITOU A EXCLUSÃO DA CONTA</p>
-                                <button class="btn-gamer" style="background:#ff3333; color:#fff; font-size:0.8rem; padding:8px;" onclick="deletarUsuarioDoBancoTotal('${uid}', '${users[uid].email}')">🚨 APAGAR DADOS DO BANCO TOTAL</button>
-                            </div>
-                        `;
+                        userBox.style.border = "2px solid #ff3333";
                     }
 
-                    userBox.innerHTML = `
-                        <div class="user-info">
-                            <p><strong>👥 Cliente da Base Comercial:</strong> ${users[uid].nome} ${users[uid].sobrenome}</p>
-                            <p><strong>WhatsApp:</strong> ${users[uid].whatsapp || 'Não cadastrado'}</p>
-                            <p><strong>E-mail:</strong> ${users[uid].email}</p>
-                            <div style="margin: 10px 0; background:#161c26; border:1px solid #242f41; padding:8px; border-radius:4px;">
-                                <p style="margin:0 0 5px 0; font-size:0.8rem; color:#8899a6;">Patrimônio de Jogos do Cliente:</p>
-                                <ul style="margin:0; padding:0; list-style:none;">${listaJogosAtivosHtml}</ul>
+                    if (filtroAdminAtual === "concluidos") {
+                        userBox.innerHTML = `
+                            <div class="user-info">
+                                <p><strong>🏆 Jogador Ativo (Temporada):</strong> ${users[uid].nome} ${users[uid].sobrenome}</p>
+                                <p><strong>WhatsApp:</strong> ${users[uid].whatsapp || 'Não cadastrado'}</p>
+                                <p><strong>E-mail:</strong> ${users[uid].email}</p>
+                                <div style="margin: 10px 0; background:#1b2430; padding:8px; border-radius:4px;">
+                                    <p style="margin:0 0 5px 0; font-size:0.8rem; color:#00ff66;">Cards Ativos na Conta:</p>
+                                    <ul style="margin:0; padding:0; list-style:none;">${listaJogosAtivosHtml}</ul>
+                                </div>
                             </div>
-                        </div>
-                        ${botoesAbaCadastrados}
-                    `;
-                }
+                            <div style="display:flex; gap:5px; align-items:center; margin-bottom:10px;">
+                                <select id="select-game-${uid}" ${estiloGamerSelectCorrigido} style="margin:0; flex:1; height:40px;"><option value="">+ Injetar Card Extra</option></select>
+                                <button class="btn-gamer" onclick="injetarCardDiretoAdmin('${uid}')" style="margin:0; height:40px; width:45px; padding:0;">+</button>
+                            </div>
+                            <button class="btn-sair" onclick="excluirSolicitacaoEComprovante('${uid}')" style="width:100%; font-size:0.8rem; padding:6px; background:#2d1313; border:1px solid #ff3333; color:#ff3333;">📦 Mover Manualmente para Cadastrados (Recuar)</button>
+                        `;
+                    } else {
+                        let botoesAbaCadastrados = `
+                            <div style="display:flex; gap:5px; align-items:center;">
+                                <select id="select-game-${uid}" ${estiloGamerSelectCorrigido} style="margin:0; flex:1; height:40px;"><option value="">Injetar Novo Patch Direto</option></select>
+                                <button class="btn-gamer" onclick="injetarCardDiretoAdmin('${uid}')" style="margin:0; height:40px; width:45px; padding:0;">+</button>
+                            </div>
+                        `;
 
-                listaUsuariosAdmin.appendChild(userBox);
-                const selectElement = document.getElementById(`select-game-${uid}`);
-                if (selectElement) alimentarSelectComCards(selectElement, users[uid].jogos_liberados);
+                        if (status === "solicitou_exclusao") {
+                            botoesAbaCadastrados = `
+                                <div style="background:#281216; border:1px solid #ff3333; padding:10px; border-radius:4px; text-align:center;">
+                                    <p style="color:#ff3333; font-weight:bold; font-size:0.85rem; margin-bottom:8px;">⚠️ O USUÁRIO SOLICITOU A EXCLUSÃO DA CONTA</p>
+                                    <button class="btn-gamer" style="background:#ff3333; color:#fff; font-size:0.8rem; padding:8px;" onclick="deletarUsuarioDoBancoTotal('${uid}', '${users[uid].email}')">🚨 APAGAR DADOS DO BANCO TOTAL</button>
+                                </div>
+                            `;
+                        }
+
+                        userBox.innerHTML = `
+                            <div class="user-info">
+                                <p><strong>👥 Cliente da Base Comercial:</strong> ${users[uid].nome} ${users[uid].sobrenome}</p>
+                                <p><strong>WhatsApp:</strong> ${users[uid].whatsapp || 'Não cadastrado'}</p>
+                                <p><strong>E-mail:</strong> ${users[uid].email}</p>
+                                <div style="margin: 10px 0; background:#161c26; border:1px solid #242f41; padding:8px; border-radius:4px;">
+                                    <p style="margin:0 0 5px 0; font-size:0.8rem; color:#8899a6;">Patrimônio de Jogos do Cliente:</p>
+                                    <ul style="margin:0; padding:0; list-style:none;">${listaJogosAtivosHtml}</ul>
+                                </div>
+                            </div>
+                            ${botoesAbaCadastrados}
+                        `;
+                    }
+                    listaUsuariosAdmin.appendChild(userBox);
+                    const selectElement = document.getElementById(`select-game-${uid}`);
+                    if (selectElement) alimentarSelectComCards(selectElement, users[uid].jogos_liberados);
+                }
             });
 
             if (contagemFiltrados === 0) {
-                listaUsuariosAdmin.innerHTML = `<p style="color:#aaa; padding:15px; text-align:center;">Nenhum jogador nesta aba.</p>`;
+                listaUsuariosAdmin.innerHTML = `<p style="color:#aaa; padding:15px; text-align:center;">Nenhum jogador ou pedido pendente nesta aba.</p>`;
             }
         });
     });
 }
 
-function abrirComprovanteNovaAba(uid) {
-    database.ref(`usuarios/${uid}/comprovante_base64`).once('value', snapshot => {
+function abrirComprovantePedidoNovaAba(uid, pedidoId) {
+    database.ref(`usuarios/${uid}/pedidos/${pedidoId}/comprovante_base64`).once('value', snapshot => {
         const base64Data = snapshot.val();
         if (base64Data) {
             const novaAba = window.open();
@@ -842,18 +851,38 @@ function abrirComprovanteNovaAba(uid) {
     });
 }
 
-async function injetarCardParaUsuario(uid) {
+async function aprovarPedidoEspecifico(uid, pedidoId, cardId) {
+    if (confirm("Deseja confirmar o pagamento deste comprovante e liberar o patch na conta do usuário?")) {
+        try {
+            // Libera o jogo na conta do cliente
+            await database.ref(`usuarios/${uid}/jogos_liberados/${cardId}`).set(true);
+            // Atualiza status geral do usuário
+            await database.ref(`usuarios/${uid}/status_cadastro`).set("pago");
+            // Remove o pedido específico da fila de pendentes
+            await database.ref(`usuarios/${uid}/pedidos/${pedidoId}`).remove();
+            alert("🔥 Pagamento aprovado e jogo liberado com sucesso!");
+        } catch (error) { alert("Erro ao processar: " + error.message); }
+    }
+}
+
+async function recusarPedidoEspecifico(uid, pedidoId) {
+    if (confirm("Tem certeza que deseja recusar e deletar esta solicitação pendente?")) {
+        try {
+            await database.ref(`usuarios/${uid}/pedidos/${pedidoId}`).remove();
+            alert("Solicitação excluída.");
+        } catch (error) { alert("Erro: " + error.message); }
+    }
+}
+
+async function injetarCardDiretoAdmin(uid) {
     const selectElement = document.getElementById(`select-game-${uid}`);
     if (!selectElement) return;
     const selectedCardId = selectElement.value;
+    if (!selectedCardId) return alert("Selecione um patch válido para injetar.");
     try {
         await database.ref(`usuarios/${uid}/status_cadastro`).set("pago");
-        if (selectedCardId) {
-            await database.ref(`usuarios/${uid}/jogos_liberados/${selectedCardId}`).set(true);
-            alert("🔥 Sucesso! Jogador movido para Aprovados!");
-        } else {
-            alert("Status atualizado para PAGO!");
-        }
+        await database.ref(`usuarios/${uid}/jogos_liberados/${selectedCardId}`).set(true);
+        alert("🔥 Patch injetado direto!");
     } catch (error) { alert("Erro: " + error.message); }
 }
 
@@ -867,17 +896,24 @@ async function removerAcessoJogo(uid, gameId) {
 async function excluirSolicitacaoEComprovante(uid) {
     if (confirm("Deseja arquivar e mover este cliente para a aba de 'Clientes Cadastrados'?")) {
         try {
-            await database.ref(`usuarios/${uid}/comprovante_base64`).set("");
-            await database.ref(`usuarios/${uid}/id_card_comprado`).set("");
+            await database.ref(`usuarios/${uid}/pedidos`).remove();
             await database.ref(`usuarios/${uid}/status_cadastro`).set("cliente_cadastrado");
             alert("Mergulhado com sucesso na lista de cadastrados!");
         } catch (error) { alert("Erro: " + error.message); }
     }
 }
 
+async function deletarUsuarioDoBancoTotal(uid, email) {
+    if (confirm(`🚨 ALERTA CRÍTICO:\nDeseja deletar totalmente a conta e registros de ${email}?`)) {
+        try {
+            await database.ref(`usuarios/${uid}`).remove();
+            alert("Conta e registros eliminados do banco de dados!");
+        } catch (error) { alert("Erro: " + error.message); }
+    }
+}
+
 async function deslogar() {
     if (confirm("Deseja realmente sair do sistema?")) {
-        // Remove referências locais ativas antes de deslogar do Firebase para evitar loops orfãos
         usuarioLogadoUid = null;
         dadosClienteAtual = {};
         await auth.signOut();
@@ -966,6 +1002,7 @@ if (dropZoneElement && inputComprovanteElement) {
     };
 }
 
+// Interceptador de Comprovantes: Modificado para empilhar múltiplos pedidos em lista
 if (formComprovanteElement) {
     formComprovanteElement.addEventListener('submit', async function(e) {
         e.preventDefault();
@@ -993,19 +1030,26 @@ if (formComprovanteElement) {
         }
         
         try {
-            const atualizacaoDados = {
-                status_cadastro: "comprovante_enviado",
+            const novoPedidoDados = {
                 id_card_comprado: cardIdEscolhido,
-                comprovante_base64: comprovanteBase64Global
+                comprovante_base64: comprovanteBase64Global,
+                timestamp: Date.now()
             };
             
-            await database.ref(`usuarios/${usuarioLogadoUid}`).update(atualizacaoDados);
-            alert("🚀 Comprovante enviado com sucesso!\nO administrador analisará os dados para liberação imediata.");
+            // Adiciona como um novo registro único dentro do nó de pedidos do usuário
+            await database.ref(`usuarios/${usuarioLogadoUid}/pedidos`).push(novoPedidoDados);
+            // Atualiza status geral do usuário para alertar análise na dashboard
+            await database.ref(`usuarios/${usuarioLogadoUid}/status_cadastro`).set("comprovante_enviado");
+            
+            alert("🚀 Comprovante enviado com sucesso!\nO administrador analisará este pedido para liberação.");
             
             if (modalFormEnvio) modalFormEnvio.classList.remove('active');
             if (formComprovanteElement) formComprovanteElement.reset();
             comprovanteBase64Global = "";
             if (fileInfoElement) fileInfoElement.innerText = "Nenhum arquivo selecionado";
+            
+            // Recarrega o estado local da dashboard para exibir alertas visuais corretos imediatamente
+            auth.currentUser.reload();
             
         } catch (erro) {
             alert("Erro de comunicação com o banco: " + erro.message);
@@ -1013,6 +1057,34 @@ if (formComprovanteElement) {
             if (btnSub) {
                 btnSub.innerText = "CONCLUIR INSCRIÇÃO";
                 btnSub.disabled = false;
+            }
+        }
+    });
+}
+
+const btnResetGeral = document.getElementById('btn-reset-geral-temporada');
+if (btnResetGeral) {
+    btnResetGeral.addEventListener('click', async () => {
+        const conf1 = confirm("⚠️ ATENÇÃO - FIM DA PRÉ-VENDA:\n\nDeseja continuar?");
+        if (conf1) {
+            try {
+                btnResetGeral.innerText = "ARQUIVANDO TEMPORADA..."; btnResetGeral.disabled = true;
+                const snapshot = await database.ref('usuarios').once('value');
+                const usuarios = snapshot.val();
+                if (usuarios) {
+                    const loteMudancas = {};
+                    Object.keys(usuarios).forEach(uid => {
+                        if (usuarios[uid].email !== "admin@admin.com" && usuarios[uid].status_cadastro === "pago") {
+                            loteMudancas[`usuarios/${uid}/status_cadastro`] = "cliente_cadastrado";
+                            loteMudancas[`usuarios/${uid}/pedidos`] = null; 
+                        }
+                    });
+                    await database.ref().update(loteMudancas);
+                    alert("🗂️ Temporada encerrada e arquivada com sucesso!");
+                }
+            } catch (error) { alert("Erro no reset geral: " + error.message); }
+            finally {
+                btnResetGeral.innerText = "📦 ARQUIVAR APROVADOS DA TEMPORADA"; btnResetGeral.disabled = false;
             }
         }
     });
