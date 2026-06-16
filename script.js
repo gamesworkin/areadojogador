@@ -152,7 +152,7 @@ if (tabSolicPendentes && tabSolicConcluidos && tabSolicCadastrados) {
 }
 
 // ==========================================================================
-// MONITOR DE SESSÃO COM SEGURANÇA ADAPTADA E GERENCIADOR DE EXCLUSÃO
+// MONITOR DE SESSÃO COM SENSOR ADAPTADO CONTRA MÚLTIPLAS COMPRAS
 // ==========================================================================
 auth.onAuthStateChanged(user => {
     if (user) {
@@ -163,7 +163,8 @@ auth.onAuthStateChanged(user => {
             ouvirCardsGlobaisAdmin();
             ouvirEPovoarMenuVisualAdmin(); 
         } else {
-            database.ref('usuarios/' + user.uid).once('value').then(snapshot => {
+            // Escuta ativa (.on) para sincronizar e ocultar patches comprados na vitrine imediatamente
+            database.ref('usuarios/' + user.uid).on('value', snapshot => {
                 const dados = snapshot.val();
                 if (dados) {
                     dadosClienteAtual = dados;
@@ -181,7 +182,6 @@ auth.onAuthStateChanged(user => {
                     const areaPendente = document.getElementById('area-compra-pendente');
                     const caixaAnalise = document.getElementById('caixa-alerta-analise-comprovante');
 
-                    // Verifica se o usuário tem alguma solicitação na coleção de pedidos
                     const temPedidosPendentes = dados.pedidos && Object.keys(dados.pedidos).length > 0;
 
                     if (temPedidosPendentes) {
@@ -205,6 +205,7 @@ auth.onAuthStateChanged(user => {
     }
 });
 
+// FUNÇÃO REESTRUTURADA COM DUPLA CHECAGEM: Oculta itens comprados ou que já estão na fila de análise
 function povoarVitrineDeVendasCliente(jogosLiberadosUsuario) {
     const areaPendente = document.getElementById('area-compra-pendente');
     const containerVitrine = document.getElementById('grid-vitrine-vendas');
@@ -217,8 +218,23 @@ function povoarVitrineDeVendasCliente(jogosLiberadosUsuario) {
         containerVitrine.innerHTML = "";
         let totalDisponiveisVenda = 0;
 
+        // Lista os IDs de patches que possuem pedidos em análise
+        const idsPatchesComPedidoPendente = [];
+        if (dadosClienteAtual.pedidos) {
+            Object.keys(dadosClienteAtual.pedidos).forEach(pId => {
+                const p = dadosClienteAtual.pedidos[pId];
+                if (p.id_card_comprado) {
+                    idsPatchesComPedidoPendente.push(p.id_card_comprado);
+                }
+            });
+        }
+
         Object.keys(cardsGlobais).forEach(cardId => {
-            if (!jogosLiberadosUsuario[cardId]) {
+            const jaAdquirido = jogosLiberadosUsuario[cardId] === true;
+            const jaEmAnalise = idsPatchesComPedidoPendente.includes(cardId);
+
+            // Regra: só renderiza o card na vitrine se não foi comprado E não está em análise
+            if (!jaAdquirido && !jaEmAnalise) {
                 totalDisponiveisVenda++;
                 const cardVitrine = document.createElement('div');
                 cardVitrine.className = 'game-card';
@@ -588,7 +604,7 @@ if (btnSalvarVisualMenu) {
         if (!dadosValidos) { alert("⚠️ Existem campos incompletos no construtor."); return; }
         try {
             await database.ref('configuracao_menu_json').set(estruturaMenuFinal.length > 0 ? JSON.stringify(estruturaMenuFinal, null, 2) : "");
-            alert("🚀 Menu Horizontal updated successfully!");
+            alert("🚀 Menu Horizontal atualizado com sucesso!");
         } catch (e) { alert("Erro: " + e.message); }
     });
 }
@@ -622,7 +638,7 @@ if (formCriarCard) {
         };
 
         try {
-            if (idEdicao) { await database.ref(`cards_disponiveis/${idEdicao}`).set(dadosCard); alert("🔄 Card updated!"); cancelarEdicaoCard(); }
+            if (idEdicao) { await database.ref(`cards_disponiveis/${idEdicao}`).set(dadosCard); alert("🔄 Card atualizado!"); cancelarEdicaoCard(); }
             else { await database.ref('cards_disponiveis').push(dadosCard); alert("🎯 Novo Card criado!"); formCriarCard.reset(); }
         } catch (error) { alert("Erro: " + error.message); }
     });
@@ -699,9 +715,6 @@ if (btnExportarCards) {
     });
 }
 
-// ==========================================================================
-// PAINEL ADMINISTRATIVO COM SUPORTE A MÚLTIPLOS PEDIDOS POR USUÁRIO
-// ==========================================================================
 function inicializarPainelAdmin() {
     if (!listaUsuariosAdmin) return;
     database.ref('cards_disponiveis').once('value', snapshotCards => {
@@ -719,7 +732,6 @@ function inicializarPainelAdmin() {
                 const status = users[uid].status_cadastro || 'pendente_pagamento';
                 const temPedidos = users[uid].pedidos && Object.keys(users[uid].pedidos).length > 0;
 
-                // Regras de filtros das Abas do Admin
                 if (filtroAdminAtual === "pendentes" && !temPedidos) return;
                 if (filtroAdminAtual === "concluidos" && status !== "pago") return;
                 if (filtroAdminAtual === "cadastrados" && status !== "cliente_cadastrado" && status !== "solicitou_exclusao") return;
@@ -738,7 +750,6 @@ function inicializarPainelAdmin() {
                 const estiloGamerSelectCorrigido = `style="width:100%; height:40px; background:#1c2434; border:1px solid #242f41; border-radius:4px; color:#fff; padding:0 10px; margin-bottom:10px; font-size:0.85rem;"`;
 
                 if (filtroAdminAtual === "pendentes") {
-                    // Renderiza blocos individuais para cada pedido feito pelo usuário
                     Object.keys(users[uid].pedidos).forEach(pedidoId => {
                         contagemFiltrados++;
                         const pedido = users[uid].pedidos[pedidoId];
@@ -854,11 +865,8 @@ function abrirComprovantePedidoNovaAba(uid, pedidoId) {
 async function aprovarPedidoEspecifico(uid, pedidoId, cardId) {
     if (confirm("Deseja confirmar o pagamento deste comprovante e liberar o patch na conta do usuário?")) {
         try {
-            // Libera o jogo na conta do cliente
             await database.ref(`usuarios/${uid}/jogos_liberados/${cardId}`).set(true);
-            // Atualiza status geral do usuário
             await database.ref(`usuarios/${uid}/status_cadastro`).set("pago");
-            // Remove o pedido específico da fila de pendentes
             await database.ref(`usuarios/${uid}/pedidos/${pedidoId}`).remove();
             alert("🔥 Pagamento aprovado e jogo liberado com sucesso!");
         } catch (error) { alert("Erro ao processar: " + error.message); }
@@ -1002,7 +1010,6 @@ if (dropZoneElement && inputComprovanteElement) {
     };
 }
 
-// Interceptador de Comprovantes: Modificado para empilhar múltiplos pedidos em lista
 if (formComprovanteElement) {
     formComprovanteElement.addEventListener('submit', async function(e) {
         e.preventDefault();
@@ -1036,9 +1043,7 @@ if (formComprovanteElement) {
                 timestamp: Date.now()
             };
             
-            // Adiciona como um novo registro único dentro do nó de pedidos do usuário
             await database.ref(`usuarios/${usuarioLogadoUid}/pedidos`).push(novoPedidoDados);
-            // Atualiza status geral do usuário para alertar análise na dashboard
             await database.ref(`usuarios/${usuarioLogadoUid}/status_cadastro`).set("comprovante_enviado");
             
             alert("🚀 Comprovante enviado com sucesso!\nO administrador analisará este pedido para liberação.");
@@ -1048,7 +1053,6 @@ if (formComprovanteElement) {
             comprovanteBase64Global = "";
             if (fileInfoElement) fileInfoElement.innerText = "Nenhum arquivo selecionado";
             
-            // Recarrega o estado local da dashboard para exibir alertas visuais corretos imediatamente
             auth.currentUser.reload();
             
         } catch (erro) {
