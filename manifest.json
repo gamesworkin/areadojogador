@@ -1,6 +1,6 @@
 {
-  "name": "Workin'Store | Sua Lista",
-  "short_name": "Catálogo Workin'Store",
+  "name": "Área do Jogador",
+  "short_name": "Área do Jogador",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
@@ -8,9 +8,9 @@
   "theme_color": "#0b0e14",
   "icons": [
     {
-      "src": "fav.ico",
+      "src": "aj.png",
       "sizes": "128x128",
-      "type": "image/x-icon",
+      "type": "image/png",
       "purpose": "any maskable"
     }
   ]
